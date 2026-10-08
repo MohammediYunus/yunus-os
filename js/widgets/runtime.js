@@ -1,4 +1,4 @@
-import { h, fmtInt } from '/js/lib/ui.js';
+import { h, fmtInt } from '../lib/ui.js';
 const el = {};
 export default {
   mount(root) {
@@ -11,10 +11,10 @@ export default {
   update(data, ctx) {
     const runtime = data.runtime || {};
     const demo = data.sources?.runtime?.status === 'demo';
-    el.label.textContent = demo ? 'DEMO ONLINE' : 'LOCAL ONLINE';
-    el.detail.textContent = demo ? 'Explore the console, then make it yours.' : 'Your command center is running on this computer.';
+    el.label.textContent = ctx.browserDemo ? 'BROWSER DEMO' : demo ? 'DEMO ONLINE' : 'LOCAL ONLINE';
+    el.detail.textContent = ctx.browserDemo ? 'Sample workspace. Your tasks stay in this browser.' : demo ? 'Explore the console, then make it yours.' : 'Your command center is running on this computer.';
     el.stats.replaceChildren(...[[runtime.repoCount, 'repositories'], [runtime.connectedSources, 'connections']].map(([count, label]) => h('div', {}, h('strong', { class: 'num' }, fmtInt(count)), h('span', {}, label))));
-    el.facts.replaceChildren(...[['Platform', runtime.platform || 'Local'], ['Node', runtime.nodeVersion || 'Unknown'], ['Assistant', runtime.assistantProvider === 'local' ? 'Local commands' : runtime.assistantProvider || 'Not configured'], ['Voice input', runtime.voiceReady ? 'Ready' : 'Optional · not ready']].flatMap(([name, value]) => [h('dt', {}, name), h('dd', {}, value)]));
+    el.facts.replaceChildren(...[['Platform', runtime.platform || 'Local'], ctx.browserDemo ? ['Task storage', data.storage?.persistent === false ? 'This tab only' : 'This browser'] : ['Node', runtime.nodeVersion || 'Unknown'], ['Assistant', runtime.assistantProvider === 'local' ? 'Local commands' : runtime.assistantProvider || 'Not configured'], ctx.browserDemo ? ['Voice input', 'Local app only'] : ['Voice input', runtime.voiceReady ? 'Ready' : 'Optional · not ready']].flatMap(([name, value]) => [h('dt', {}, name), h('dd', {}, value)]));
     ctx.aux.textContent = demo ? 'Sample' : `${Math.floor((runtime.uptimeSeconds || 0) / 60)}m up`;
   },
 };

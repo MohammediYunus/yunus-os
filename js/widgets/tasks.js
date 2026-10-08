@@ -1,4 +1,4 @@
-import { h, relTime } from '/js/lib/ui.js';
+import { h, relTime } from '../lib/ui.js';
 const refs = {}, rows = new Map(); let tasks = [], filter = 'open', context, busy = false;
 function createRow(task) {
   const toggle = h('input', { type: 'checkbox', onclick: event => { if (busy) event.preventDefault(); }, onchange: async () => { await mutate(`/api/tasks/${encodeURIComponent(task.id)}`, 'PATCH', { done: toggle.checked }); } });
@@ -39,7 +39,7 @@ function render() {
     const next = target?.[control] || refs.input;
     if (document.activeElement !== next) next.focus();
   }
-  if (context?.aux) context.aux.textContent = 'Saved locally';
+  if (context?.aux) context.aux.textContent = context.taskStorage || 'Saved locally';
 }
 async function mutate(path, method, body) {
   if (busy) return; busy = true; refs.status.textContent = ''; render();

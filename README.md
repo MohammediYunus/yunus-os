@@ -2,13 +2,19 @@
 
 A local workspace for your projects, GitHub activity and daily tasks, with an optional voice assistant.
 
-Yunus OS started as my personal dashboard. This public version keeps its interactive code graph and compact console interface, while giving each person their own configuration. It starts with clearly labeled demo data. No account, API key or package installation is needed to try it.
+Yunus OS started as my personal dashboard. This public version keeps its interactive code graph and compact console interface, while giving each person their own configuration. It starts with clearly labeled demo data. The browser demo needs no account, API key or installation.
 
 [![Yunus OS showing a live project graph, local tasks and GitHub activity](docs/media/yunus-os-preview.webp)](https://github.com/MohammediYunus/yunus-os/releases/download/v0.1.0/yunus-os-community-1080p.mp4)
 
 [Watch the demo with sound](https://github.com/MohammediYunus/yunus-os/releases/download/v0.1.0/yunus-os-community-1080p.mp4): a real workspace, a spoken assistant reply, and a task saved after approval.
 
 ## Try it
+
+**[Open the browser demo](https://MohammediYunus.github.io/yunus-os/)** to explore a fictional workspace, browse the graph, ask for a summary and try tasks. Tasks and the optional read-aloud preference stay in browser storage. If storage is unavailable, the app labels edits as temporary.
+
+The browser demo uses built-in commands, not an AI model. It cannot connect accounts, read local projects, record a microphone or open desktop apps. Use the local app below for those supported integrations.
+
+### Run on your computer
 
 Install [Node.js 22 or newer](https://nodejs.org/), then:
 
@@ -109,7 +115,12 @@ This creates a separate **Yunus OS Community.app** under dist. It does not insta
 
 ```sh
 npm test
+npm run build:demo
 ```
+
+The second command exports the browser demo to dist/browser-demo using an explicit list of presentation files and synthetic fixtures. Serve that directory with a static web server. Assets work at either the site root or a project subpath such as /yunus-os/. The local Node server and connection settings are excluded.
+
+The Browser demo workflow deploys that artifact to GitHub Pages from main. Forks can build it locally or enable their own Pages site with GitHub Actions as the source. The local server itself must remain on loopback.
 
 Tests use synthetic fixtures, temporary profiles and mocked external services. Security tests start the actual server with an empty home directory and block outbound network and child-process activity in demo mode. They exercise session authentication, origin and host checks, request size limits, static-file boundaries and credential redaction.
 
