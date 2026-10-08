@@ -12,13 +12,14 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
   const send = h('button', { type: 'submit', class: 'primary-button' }, 'Send');
   const record = h('button', { type: 'button', class: 'secondary-button' }, 'Record');
   const stop = h('button', { type: 'button', class: 'secondary-button', disabled: true }, 'Stop');
-  const voiceNote = h('p', { class: 'field-help' });
+  const voiceNote = h('p', { class: 'field-help', role: 'status', 'aria-live': 'polite' });
   const prompts = h('div', { class: 'prompt-buttons' }, ...['Give me a workspace summary', 'Show my tasks', 'Add a task: review the release checklist'].map(text => h('button', { type: 'button', class: 'prompt-button', onclick: () => { input.value = text; input.focus(); } }, text)));
   welcome.append(prompts); log.append(welcome);
   form.append(h('label', { for: 'assistant-message', class: 'microlabel' }, 'Your request'), input, h('div', { class: 'assistant-controls' }, record, stop, send), voiceNote);
   view.content.append(h('div', { class: 'assistant-meta' }, provider, h('button', { type: 'button', class: 'text-button', onclick: () => { view.dialog.close(); openConnections(); } }, 'Settings')), status, log, form);
-  let busy = false, controller = null, recorder = null, preparingMic = false, requestId = 0, speaking = false;
+  let busy = false, controller = null, recorder = null, preparingMic = false, requestId = 0, speaking = false, activeUtterance = null, speechNotice = '';
   const stopSpeech = () => {
+    activeUtterance = null;
     window.webkit?.messageHandlers?.yunusSpeech?.postMessage({ cancel: true });
     window.speechSynthesis?.cancel(); speaking = false;
   };
@@ -27,13 +28,14 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
     const names = { local: 'Local commands', ollama: 'Ollama', claude: 'Claude CLI' };
     provider.textContent = browserDemo ? 'Demo commands · no model' : names[config.assistant?.provider] || 'Local commands';
     const enabled = !!config.voice?.enabled, available = capabilities.voice?.available !== false;
+    if (!enabled) speechNotice = '';
     record.hidden = !enabled || !recordMicrophone;
     record.disabled = busy || preparingMic || (!recorder && !available);
     record.textContent = recorder ? 'Finish recording' : preparingMic ? 'Opening microphone…' : 'Record';
     record.classList.toggle('recording', !!recorder);
     send.disabled = busy || !!recorder || preparingMic;
     stop.disabled = !busy && !recorder && !speaking && !preparingMic;
-    voiceNote.textContent = browserDemo ? (enabled ? 'Replies use an installed local browser voice, if available. Microphone input is available in the local app.' : 'Read-aloud is off. You can enable it in About this demo. Microphone input is available in the local app.') : !enabled ? 'Voice is off. Enable it in Connections whenever you want.' : !available ? (capabilities.voice?.reason || 'Local transcription needs Whisper and a model. Check Connections.') : 'Record up to 30 seconds. Review the transcript before sending. Replies can be spoken aloud.';
+    voiceNote.textContent = speechNotice || (browserDemo ? (enabled ? 'Replies use an installed local browser voice, if available. Microphone input is available in the local app.' : 'Read-aloud is off. You can enable it in About this demo. Microphone input is available in the local app.') : !enabled ? 'Voice is off. Enable it in Connections whenever you want.' : !available ? (capabilities.voice?.reason || 'Local transcription needs Whisper and a model. Check Connections.') : 'Record up to 30 seconds. Review the transcript before sending. Replies can be spoken aloud.');
   };
   const addMessage = (role, text) => {
     if (welcome.isConnected) welcome.remove();
@@ -42,16 +44,26 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
   };
   const say = text => {
     if (!getConfig().voice?.enabled) return;
-    stopSpeech();
+    speechNotice = ''; stopSpeech();
+    const failed = () => { activeUtterance = null; speaking = false; speechNotice = 'The browser could not play the spoken reply. Your reply is shown above. You can try again.'; sync(); };
     const native = window.webkit?.messageHandlers?.yunusSpeech;
     if (native) { native.postMessage({ text }); speaking = true; sync(); return; }
-    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = speechSynthesis.getVoices(), localVoice = voices.find(voice => voice.localService && voice.lang.startsWith(navigator.language.split('-')[0])) || voices.find(voice => voice.localService);
-    if (!localVoice) { voiceNote.textContent = 'No local browser voice is available. Your reply is shown above.'; return; }
-    utterance.voice = localVoice; utterance.rate = 1;
-    utterance.onend = utterance.onerror = () => { speaking = false; sync(); };
-    speaking = true; speechSynthesis.speak(utterance); sync();
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      speechNotice = 'Spoken replies are not supported in this browser. Your reply is shown above.'; sync(); return;
+    }
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = speechSynthesis.getVoices(), localVoice = voices.find(voice => voice.localService && voice.lang.startsWith(navigator.language.split('-')[0])) || voices.find(voice => voice.localService);
+      if (!localVoice) { speechNotice = 'No local browser voice is available. Your reply is shown above.'; sync(); return; }
+      utterance.voice = localVoice; utterance.rate = 1;
+      utterance.onend = () => { if (activeUtterance !== utterance) return; activeUtterance = null; speaking = false; sync(); };
+      utterance.onerror = event => {
+        if (activeUtterance !== utterance) return;
+        if (event.error === 'canceled' || event.error === 'interrupted') { activeUtterance = null; speaking = false; sync(); }
+        else failed();
+      };
+      activeUtterance = utterance; speaking = true; speechSynthesis.speak(utterance); sync();
+    } catch { failed(); }
   };
   async function finishRecording() {
     if (!recorder) return;
