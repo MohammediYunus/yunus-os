@@ -44,9 +44,10 @@ export function initConnections({ getConfig, onSaved }) {
   add(voice, 'Whisper executable', 'whisperExecutable', { placeholder: 'whisper-cli' });
   add(voice, 'Whisper model file', 'whisperModelPath', { placeholder: '/path/to/ggml-model.bin', help: 'An existing local whisper.cpp model for transcription. No audio is sent to a cloud transcription service.' });
   const status = h('p', { class: 'form-status', role: 'status', 'aria-live': 'polite' });
+  const problems = h('ul', { class: 'source-problems', hidden: true, 'aria-label': 'Repository setup problems' });
   const save = h('button', { type: 'submit', class: 'primary-button' }, 'Save connections');
   const capability = h('div', { class: 'capability-note' });
-  form.append(workspace, github, assistant, voice, capability, h('div', { class: 'drawer-actions' }, status, save));
+  form.append(workspace, github, assistant, voice, capability, problems, h('div', { class: 'drawer-actions' }, status, save));
   view.content.append(form);
   function providerChanged() {
     const provider = fields.provider.value;
@@ -64,19 +65,29 @@ export function initConnections({ getConfig, onSaved }) {
     fields.claudeModel.value = config.assistant?.claudeModel || '';
     voiceEnabled.checked = !!config.voice?.enabled; fields.whisperExecutable.value = config.voice?.whisperExecutable || 'whisper-cli'; fields.whisperModelPath.value = config.voice?.whisperModelPath || '';
     capability.textContent = 'Connections stay local. Optional providers run only when you ask. Computer actions require a separate confirmation in Assistant.';
-    status.textContent = ''; status.classList.remove('error'); providerChanged();
+    status.textContent = ''; status.classList.remove('error'); problems.replaceChildren(); problems.hidden = true; providerChanged();
   };
   form.addEventListener('submit', async event => {
-    event.preventDefault(); save.disabled = true; status.classList.remove('error'); status.textContent = 'Saving and checking your workspace…';
+    event.preventDefault(); save.disabled = true; status.classList.remove('error'); problems.replaceChildren(); problems.hidden = true; status.textContent = 'Saving and checking your workspace…';
     const github = { username: fields.githubUsername.value.trim(), repositories: lines(fields.githubRepositories.value) };
     if (clearToken.checked) github.clearToken = true;
     else if (fields.githubToken.value.trim()) github.token = fields.githubToken.value.trim();
+    let saved = false;
     try {
       await api('/api/config', { method: 'POST', body: { displayName: fields.displayName.value.trim(), mode: fields.mode.value, timezone: fields.timezone.value.trim() || 'system', workspacePaths: lines(fields.workspacePaths.value), github, assistant: { provider: fields.provider.value, model: fields.model.value.trim(), claudeModel: fields.claudeModel.value.trim(), endpoint: fields.endpoint.value.trim(), executable: fields.executable.value.trim() }, voice: { enabled: voiceEnabled.checked, whisperExecutable: fields.whisperExecutable.value.trim(), whisperModelPath: fields.whisperModelPath.value.trim() } } });
-      fields.githubToken.value = ''; clearToken.checked = false;
-      await onSaved(); status.textContent = 'Connections saved. You can close this panel.';
+      saved = true; fields.githubToken.value = ''; clearToken.checked = false;
+      const data = await onSaved();
+      if (!data) throw new Error('Workspace refresh did not finish');
+      const issues = data.sources?.repos?.problems || [];
+      if (issues.length) {
+        status.textContent = `Connections saved. ${issues.length} repository folder${issues.length === 1 ? ' needs' : 's need'} attention.`;
+        status.classList.add('error');
+        problems.replaceChildren(...issues.map(problem => h('li', {}, h('strong', {}, problem.path), h('div', {}, problem.message))),
+          h('li', {}, h('button', { type: 'button', class: 'text-button', onclick: () => fields.workspacePaths.focus() }, 'Edit repository folders')));
+        problems.hidden = false;
+      } else status.textContent = 'Connections saved. You can close this panel.';
       tokenStatus.textContent = getConfig().github?.hasToken ? 'A GitHub token is saved.' : 'No GitHub token saved.';
-    } catch (error) { status.textContent = error.message; status.classList.add('error'); }
+    } catch (error) { status.textContent = saved ? 'Connections saved, but Yunus OS could not check your workspace. Use Save connections to try again.' : error.message; status.classList.add('error'); }
     finally { fields.githubToken.value = ''; save.disabled = false; }
   });
   return { open() { hydrate(); view.open(); } };

@@ -24,6 +24,9 @@ button:disabled { opacity:.5; cursor:not-allowed; }
 .source-notice { min-height:140px; padding:24px 18px; color:var(--dim); font-size:12px; line-height:1.7; }
 .source-notice p { margin-bottom:12px; }
 .source-notice.error p { color:var(--crit); }
+.source-problems { padding-left:20px; margin:12px 0; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+.source-problems li { margin:8px 0; }
+.source-notice .text-button + .text-button { margin-left:18px; }
 .panel-head { justify-content:space-between; }
 .panel-aux { min-width:0; text-align:right; flex-shrink:1; }
 .drawer { position:fixed; inset:0 0 0 auto; width:min(540px,100%); max-width:100%; height:100dvh; max-height:100dvh; margin:0; padding:0; color:var(--fg); background:var(--panel); border:0; border-left:1px solid var(--line-strong); z-index:300; overflow:hidden; }
