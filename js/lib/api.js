@@ -12,7 +12,7 @@ export async function connectSession() {
   })().finally(() => { sessionPromise = null; });
   return sessionPromise;
 }
-export async function api(path, { method = 'GET', body, signal, binary = false } = {}) {
+export async function api(path, { method = 'GET', body = method === 'DELETE' ? {} : undefined, signal, binary = false } = {}) {
   await connectSession();
   const headers = { 'X-Yunus-Token': token };
   if (body !== undefined) headers['Content-Type'] = binary ? 'audio/wav' : 'application/json';

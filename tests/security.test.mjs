@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { api } from '../js/lib/api.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 let temporary, configDir, auditFile, child, origin, port, sessionToken;
@@ -123,6 +124,19 @@ test('fresh HOME starts a usable demo without credentials, network or subprocess
     if (error.code === 'ENOENT') return '';
     throw error;
   }), '', 'Demo startup and reading must not attempt external activity');
+});
+
+test('browser client removes a local task without an explicit request body', async t => {
+  const fetchLocal = globalThis.fetch;
+  t.mock.method(globalThis, 'fetch', (route, options) => fetchLocal(new URL(route, origin), options));
+  const { task } = await api('/api/tasks', { method: 'POST', body: { title: 'Remove this local task' } });
+
+  const removed = await api(`/api/tasks/${task.id}`, { method: 'DELETE' });
+  assert.equal(removed.ok, true);
+  const dashboard = await api('/api/all');
+  assert.ok(!dashboard.tasks.items.some(item => item.id === task.id));
+  const savedTasks = JSON.parse(await readFile(path.join(configDir, 'tasks.json'), 'utf8'));
+  assert.ok(!savedTasks.some(item => item.id === task.id), 'Removal must persist to the local profile');
 });
 
 test('hostile Host, Origin and cross-site requests cannot obtain a session', async () => {
