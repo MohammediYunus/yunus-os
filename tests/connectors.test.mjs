@@ -85,6 +85,67 @@ test('only selected worktree is inspected and outside symlink source is excluded
   });
 });
 
+test('graph keeps relative links in multiline named imports and re-exports', async () => {
+  await fixture(async root => {
+    await writeFile(path.join(root, 'a.ts'), [
+      "import {\n  value\n} from './b';",
+      "export {\n  other\n} from './other';",
+      "import type {\n  Shape\n} from './shape';",
+      "import fallback, {\n  extra\n} from './mixed';",
+      "import café from './unicode';",
+      "import /* local helper */ helper from './comment-before';",
+      "import { value as commented } /* local helper */ from './comment-after';",
+      "export /* public API */ { value as publicValue } from './comment-export';",
+      "import { missing } from './absent';",
+    ].join('\n'));
+    await writeFile(path.join(root, 'other.ts'), 'export const other = 2;');
+    await writeFile(path.join(root, 'shape.ts'), 'export type Shape = { size: number };');
+    await writeFile(path.join(root, 'mixed.ts'), 'export default 3; export const extra = 4;');
+    await writeFile(path.join(root, 'unicode.ts'), 'export default 5;');
+    for (const name of ['comment-before', 'comment-after', 'comment-export']) {
+      await writeFile(path.join(root, `${name}.ts`), 'export const value = 6; export default value;');
+    }
+    const config = defaults(); config.mode = 'live'; config.workspacePaths = [root];
+    const value = await createDashboard({ store: storeFor(config), fetchImpl: () => { throw new Error('no network'); } }).load();
+    assert.deepEqual(value.graph.links.filter(link => link.source === 'repo0:a.ts' && link.kind === 'import').map(link => link.target).sort(),
+      ['repo0:b.ts', 'repo0:comment-after.ts', 'repo0:comment-before.ts', 'repo0:comment-export.ts', 'repo0:mixed.ts', 'repo0:other.ts', 'repo0:shape.ts', 'repo0:unicode.ts']);
+  });
+});
+
+test('graph falls back from emitted module extensions to selected TypeScript source files', async () => {
+  await fixture(async root => {
+    await writeFile(path.join(root, 'a.ts'), [
+      "import { value } from './b.js';",
+      "export { view } from './view.js';",
+      "import { esm } from './module.mjs';",
+      "const common = require('./common.cjs');",
+      "import { exact } from './exact.js';",
+      "import './absent.js';",
+    ].join('\n'));
+    for (const [file, source] of Object.entries({
+      'view.tsx': 'export const view = null;',
+      'module.mts': 'export const esm = 1;',
+      'common.cts': 'export const common = 2;',
+      'exact.js': 'export const exact = 3;',
+      'exact.ts': 'export const exact = 4;',
+    })) await writeFile(path.join(root, file), source);
+    const config = defaults(); config.mode = 'live'; config.workspacePaths = [root];
+    const value = await createDashboard({ store: storeFor(config), fetchImpl: () => { throw new Error('no network'); } }).load();
+    assert.deepEqual(value.graph.links.filter(link => link.source === 'repo0:a.ts' && link.kind === 'import').map(link => link.target).sort(),
+      ['repo0:b.ts', 'repo0:common.cts', 'repo0:exact.js', 'repo0:module.mts', 'repo0:view.tsx']);
+  });
+});
+
+test('graph does not join unrelated statements into multiline import clauses', async () => {
+  await fixture(async root => {
+    await writeFile(path.join(root, 'a.ts'), "export const from = 1;\nconst text = from + './b';\nimport './side.js';\nexport const count = 1\n// copied from './b'\n");
+    await writeFile(path.join(root, 'side.js'), 'export {};');
+    const config = defaults(); config.mode = 'live'; config.workspacePaths = [root];
+    const value = await createDashboard({ store: storeFor(config) }).load();
+    assert.deepEqual(value.graph.links.filter(link => link.source === 'repo0:a.ts' && link.kind === 'import').map(link => link.target), ['repo0:side.js']);
+  });
+});
+
 test('one unavailable selected repo does not erase valid repo data or fabricate a graph', async () => {
   await fixture(async root => {
     const config = defaults(); config.mode = 'live'; config.workspacePaths = [root, path.join(root, 'missing')];
