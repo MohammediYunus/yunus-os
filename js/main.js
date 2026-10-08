@@ -13,7 +13,7 @@ const WIDGETS = [
   { id: 'github', idx: '06', title: 'GitHub ops' },
   { id: 'hygiene', source: 'repos', idx: '07', title: 'Repo hygiene' },
 ];
-const state = { mods: new Map(), panels: new Map(), data: null, config: { mode: 'demo', timezone: 'system' }, capabilities: {}, request: 0, controller: null, loading: false };
+const state = { mods: new Map(), panels: new Map(), data: null, config: { mode: 'demo', timezone: 'system' }, capabilities: {}, request: 0, controller: null, loading: false, welcomeDismissed: false };
 let connections, assistant;
 function buildPanels() {
   for (const widget of WIDGETS) {
@@ -57,7 +57,7 @@ function showError(message) { document.getElementById('load-error-message').text
 function renderDashboard(data) {
   state.data = data;
   const demo = data.mode === 'demo' || data.demo === true;
-  if (!demo) document.getElementById('welcome-strip').hidden = true;
+  document.getElementById('welcome-strip').hidden = !demo || state.welcomeDismissed;
   document.getElementById('workspace-mode').textContent = demo ? 'Demo workspace' : 'My workspace';
   document.querySelector('.wordmark .sub').textContent = state.config.displayName || 'Your local command center';
   document.querySelector('.boot-version').textContent = demo ? 'demo' : 'local';
@@ -71,12 +71,13 @@ function renderDashboard(data) {
     try { state.mods.get(widget.id)?.update(data, ctx); }
     catch { ctx.notice.hidden = false; ctx.el.hidden = true; ctx.notice.replaceChildren(h('p', {}, 'This panel could not load.'), h('button', { class: 'text-button', type: 'button', onclick: () => void loadData() }, 'Reload panel')); }
   }
-  const githubReady = ['live', 'demo'].includes(data.sources?.github?.status);
-  const reposReady = ['live', 'demo'].includes(data.sources?.repos?.status);
+  const githubStatus = data.sources?.github?.status, reposStatus = data.sources?.repos?.status;
+  const githubReady = ['live', 'demo'].includes(githubStatus);
+  const reposReady = ['live', 'demo'].includes(reposStatus);
   const failing = (data.github?.recentRuns || []).filter(run => run.conclusion === 'failure').length;
   const openTasks = (data.tasks?.items || []).filter(task => !task.done).length;
   const dirty = (data.repos?.repos || []).reduce((sum, repo) => sum + (Number(repo.dirtyFiles) || 0), 0);
-  const chips = [['ok', 'Local server up'], [githubReady ? (failing ? 'crit' : 'ok') : '', githubReady ? (failing ? `${failing} recent run${failing === 1 ? '' : 's'} failed` : 'Recent CI clear') : 'GitHub not connected'], [openTasks ? 'warn' : 'ok', `${openTasks} tasks open`], [reposReady ? (dirty ? 'warn' : 'ok') : '', reposReady ? `${dirty} dirty files` : 'No workspace folders']];
+  const chips = [['ok', 'Local server up'], [githubReady ? (failing ? 'crit' : 'ok') : githubStatus === 'error' ? 'warn' : '', githubReady ? (failing ? `${failing} recent run${failing === 1 ? '' : 's'} failed` : 'Recent CI clear') : githubStatus === 'error' ? 'GitHub unavailable' : 'GitHub not connected'], [openTasks ? 'warn' : 'ok', `${openTasks} tasks open`], [reposReady ? (dirty ? 'warn' : 'ok') : reposStatus === 'error' ? 'warn' : '', reposReady ? `${dirty} dirty files` : reposStatus === 'error' ? 'Workspace unavailable' : 'No workspace folders']];
   document.getElementById('system-chips').replaceChildren(...chips.map(([tone, text]) => h('span', { class: `chip ${tone}` }, h('span', { class: 'dot' }), text)));
   document.getElementById('footer').replaceChildren(h('span', {}, data.disclosure || (demo ? 'Demo sources · tasks are saved on this computer' : 'Your connected workspace · read-only sources')), h('span', { class: 'spacer' }), h('span', {}, `Updated ${new Date(data.fetchedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`));
   document.getElementById('load-error').hidden = true;
@@ -96,6 +97,7 @@ async function loadConfig() {
   const response = await api('/api/config'); state.config = response.config || response; state.capabilities = response.capabilities || {};
 }
 async function init() {
+  try { state.welcomeDismissed = localStorage.getItem('yos-welcome-dismissed') === '1'; } catch {}
   buildPanels(); startClock(); initTheme(document.getElementById('theme-toggle'));
   const booted = boot();
   connections = initConnections({ getConfig: () => state.config, onSaved: async () => { await loadConfig(); await loadData({ refresh: true }); assistant?.sync(); } });
@@ -104,14 +106,12 @@ async function init() {
   document.getElementById('assistant-open').addEventListener('click', () => assistant.open());
   document.getElementById('refresh').addEventListener('click', () => void loadData({ refresh: true }));
   document.getElementById('retry').addEventListener('click', async () => { try { await loadConfig(); await loadData(); } catch (error) { showError(error.message); } });
-  document.getElementById('welcome-dismiss').addEventListener('click', () => { document.getElementById('welcome-strip').hidden = true; try { localStorage.setItem('yos-welcome-dismissed', '1'); } catch {} });
+  document.getElementById('welcome-dismiss').addEventListener('click', () => { state.welcomeDismissed = true; document.getElementById('welcome-strip').hidden = true; try { localStorage.setItem('yos-welcome-dismissed', '1'); } catch {} });
   await Promise.all(WIDGETS.map(async widget => {
     try { const module = (await import(`/js/widgets/${widget.id}.js`)).default; module.mount(state.panels.get(widget.id).el, state.panels.get(widget.id)); state.mods.set(widget.id, module); }
     catch { const panel = state.panels.get(widget.id); panel.notice.hidden = false; panel.notice.textContent = 'Panel unavailable. Reload the page to try again.'; }
   }));
   await connectSession(); await loadConfig(); await loadData(); await booted;
-  let dismissed = false; try { dismissed = localStorage.getItem('yos-welcome-dismissed') === '1'; } catch {}
-  document.getElementById('welcome-strip').hidden = dismissed || state.config.mode !== 'demo';
   setInterval(() => { if (!document.hidden && !state.loading) void loadData(); }, 60_000);
   setInterval(() => { for (const module of state.mods.values()) { try { module.tick?.(Date.now()); } catch {} } }, 1000);
 }
