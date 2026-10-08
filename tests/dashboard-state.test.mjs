@@ -133,3 +133,30 @@ test('all failed repositories keep setup guidance visible and can reopen Connect
   await app.update(value);
   assert.equal(app.ids.get('panel-hygiene').children.find(child => child.id === 'body-hygiene').hidden, false, 'Partial repository data stays visible');
 });
+
+
+test('a stale GitHub snapshot stays visible without claiming current CI results', async () => {
+  const app = await shell(), value = dashboard('live', 'error');
+  value.github = { myOpenPRs: [{ title: 'Previously loaded PR' }], recentRuns: [{ conclusion: 'failure' }] };
+  value.sources.github.stale = true;
+  value.sources.github.updatedAt = '2026-01-01T12:00:00Z';
+  await app.update(value);
+  const panel = app.ids.get('panel-github');
+  const notice = panel.children.find(child => child.class === 'source-notice');
+  const body = panel.children.find(child => child.id === 'body-github');
+  assert.equal(body.hidden, false);
+  assert.equal(notice.hidden, false);
+  assert.match(notice.textContent, /Showing your last successful update/);
+  assert.ok(notice.children.find(child => child.textContent === 'Try again'));
+  assert.ok(app.chips().includes('GitHub update delayed'));
+  assert.ok(!app.chips().some(text => /Recent CI clear|recent runs? failed/.test(text)));
+  value.sources.github.stale = false;
+  value.github = null;
+  await app.update(value);
+  assert.equal(body.hidden, true, 'A first failure has no retained data to show');
+  assert.ok(app.chips().includes('GitHub unavailable'));
+  await app.change('live', 'live');
+  assert.equal(notice.hidden, true);
+  assert.equal(body.hidden, false);
+  assert.ok(app.chips().includes('Recent CI clear'));
+});

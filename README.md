@@ -64,6 +64,8 @@ Open **Connections** in the dashboard to configure your display name and choose 
 
 Demo and live data are distinguished in the interface. A disabled or failing connector stays visibly disabled or failed; it does not silently fill the panel with sample activity.
 
+If GitHub stops responding after a successful refresh, its panel keeps that last result and shows when it was updated. Retry when the connection is available. This snapshot stays in memory only while the local server runs and is cleared when the GitHub account, token, repository selection or workspace mode changes. Stale results are excluded from current CI status and assistant summaries. Local tasks remain available while the local server is running.
+
 The live graph shows selected files, folders and supported import relationships. It is an explorable project map, **not a complete semantic dependency analysis** for every language. A large graph in demo mode represents a fictional workspace.
 
 Multiline JS/TS imports and re-exports are included. When a relative .js, .mjs or .cjs path has no selected literal file, the map also looks for its TypeScript source counterpart. Literal files take precedence; the graph does not read tsconfig aliases or reproduce the compiler's full resolution rules.

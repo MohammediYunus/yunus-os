@@ -89,6 +89,7 @@ export default {
     const review = sectionHead('Needs your review');
     const prs = sectionHead('Your open PRs');
     const runs = sectionHead('Recent runs');
+    els.freshness = h('div', { class: 'gh-freshness', hidden: true });
     els.reviewBadge = review.badge;
     els.prsBadge = prs.badge;
     els.runsBadge = runs.badge;
@@ -97,6 +98,7 @@ export default {
     els.runsBody = h('div', { class: 'gh-sec-body' }, h('div', { class: 'empty-state' }, 'awaiting data'));
     el.append(
       h('div', { class: 'w-github' },
+        els.freshness,
         h('div', { class: 'gh-sec' }, review.head, els.reviewBody),
         h('div', { class: 'gh-sec' }, prs.head, els.prsBody),
         h('div', { class: 'gh-sec' }, runs.head, els.runsBody),
@@ -106,6 +108,18 @@ export default {
 
   update(data, ctx) {
     const gh = data?.github || null;
+    const source = data?.sources?.github;
+    const updatedAt = source?.updatedAt;
+    const updated = new Date(updatedAt);
+    const hasTimestamp = !!gh && !!updatedAt && Number.isFinite(updated.getTime());
+    els.freshness.hidden = !hasTimestamp;
+    els.freshness.replaceChildren();
+    if (hasTimestamp) {
+      els.freshness.append(
+        source.stale ? 'Last known data · Updated ' : 'Last updated ',
+        h('time', { datetime: updated.toISOString(), title: updated.toLocaleString() }, updated.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })),
+      );
+    }
     if (!gh) {
       if (ctx?.aux) ctx.aux.replaceChildren(h('span', { class: 'gh-aux' }, '—'));
       setBadge(els.reviewBadge, null);

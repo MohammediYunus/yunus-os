@@ -24,6 +24,8 @@ button:disabled { opacity:.5; cursor:not-allowed; }
 .source-notice { min-height:140px; padding:24px 18px; color:var(--dim); font-size:12px; line-height:1.7; }
 .source-notice p { margin-bottom:12px; }
 .source-notice.error p { color:var(--crit); }
+.source-notice.stale { min-height:0; padding:12px 18px 0; }
+.source-notice.stale p { margin-bottom:3px; }
 .source-problems { padding-left:20px; margin:12px 0; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
 .source-problems li { margin:8px 0; }
 .source-notice .text-button + .text-button { margin-left:18px; }
