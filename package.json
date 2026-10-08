@@ -1,6 +1,6 @@
 {
   "name": "yunus-os",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "private": true,
   "description": "A local command center for your projects, GitHub and voice assistant.",
   "type": "module",
@@ -9,6 +9,7 @@
     "start": "node server.mjs",
     "test": "node --test tests/*.test.mjs",
     "check": "node --check server.mjs",
+    "build:demo": "node scripts/build-browser-demo.mjs",
     "build:mac": "bash scripts/build-macos.sh"
   },
   "license": "MIT"

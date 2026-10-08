@@ -1,10 +1,8 @@
 import { h } from './ui.js';
-import { api } from './api.js';
 import { drawer } from './drawer.js';
-import { recordMicrophone } from './microphone.js';
 
-export function initAssistant({ getConfig, getCapabilities, onRefresh, openConnections }) {
-  const view = drawer('assistant', 'Assistant', 'Ask about your workspace, make a plan, or add a task.');
+export function initAssistant({ api, recordMicrophone = null, browserDemo = false, getConfig, getCapabilities, onRefresh, openConnections }) {
+  const view = drawer('assistant', 'Assistant', browserDemo ? 'Ask about the sample workspace or add a task in this browser.' : 'Ask about your workspace, make a plan, or add a task.');
   const provider = h('span', { class: 'assistant-provider' });
   const status = h('p', { class: 'assistant-status', role: 'status', 'aria-live': 'polite' }, 'Ready');
   const log = h('div', { class: 'conversation', role: 'log', 'aria-label': 'Assistant conversation', 'aria-live': 'polite' });
@@ -27,15 +25,15 @@ export function initAssistant({ getConfig, getCapabilities, onRefresh, openConne
   const sync = () => {
     const config = getConfig(), capabilities = getCapabilities();
     const names = { local: 'Local commands', ollama: 'Ollama', claude: 'Claude CLI' };
-    provider.textContent = names[config.assistant?.provider] || 'Local commands';
+    provider.textContent = browserDemo ? 'Demo commands · no model' : names[config.assistant?.provider] || 'Local commands';
     const enabled = !!config.voice?.enabled, available = capabilities.voice?.available !== false;
-    record.hidden = !enabled;
+    record.hidden = !enabled || !recordMicrophone;
     record.disabled = busy || preparingMic || (!recorder && !available);
     record.textContent = recorder ? 'Finish recording' : preparingMic ? 'Opening microphone…' : 'Record';
     record.classList.toggle('recording', !!recorder);
     send.disabled = busy || !!recorder || preparingMic;
     stop.disabled = !busy && !recorder && !speaking && !preparingMic;
-    voiceNote.textContent = !enabled ? 'Voice is off. Enable it in Connections whenever you want.' : !available ? (capabilities.voice?.reason || 'Local transcription needs Whisper and a model. Check Connections.') : 'Record up to 30 seconds. Review the transcript before sending. Replies can be spoken aloud.';
+    voiceNote.textContent = browserDemo ? (enabled ? 'Replies use an installed local browser voice, if available. Microphone input is available in the local app.' : 'Read-aloud is off. You can enable it in About this demo. Microphone input is available in the local app.') : !enabled ? 'Voice is off. Enable it in Connections whenever you want.' : !available ? (capabilities.voice?.reason || 'Local transcription needs Whisper and a model. Check Connections.') : 'Record up to 30 seconds. Review the transcript before sending. Replies can be spoken aloud.';
   };
   const addMessage = (role, text) => {
     if (welcome.isConnected) welcome.remove();
@@ -70,7 +68,7 @@ export function initAssistant({ getConfig, getCapabilities, onRefresh, openConne
   }
   record.addEventListener('click', async () => {
     if (recorder) { await finishRecording(); return; }
-    if (busy || preparingMic || !getConfig().voice?.enabled) return;
+    if (busy || preparingMic || !recordMicrophone || !getConfig().voice?.enabled) return;
     stopSpeech(); preparingMic = true; const ownId = ++requestId; status.textContent = 'Allow microphone access to start recording.'; sync();
     try {
       const session = await recordMicrophone(() => { void finishRecording(); });
@@ -97,7 +95,7 @@ export function initAssistant({ getConfig, getCapabilities, onRefresh, openConne
       const text = String(response.text || 'No response returned. Try a different request.');
       const entry = addMessage('assistant', text);
       if (Array.isArray(response.actions) && response.actions.length) {
-        const actions = h('div', { class: 'action-approvals' }, h('p', {}, 'Review before running on this computer:'));
+        const actions = h('div', { class: 'action-approvals' }, h('p', {}, browserDemo ? 'Review before saving in this browser:' : 'Review before running on this computer:'));
         for (const action of response.actions.slice(0, 5)) {
           const description = String(action.label || action.description || (action.type === 'add_task' ? `Add task: ${action.title}` : null) || action.app || action.url || action.type || 'Proposed action').slice(0, 250);
           const button = h('button', { type: 'button', class: 'secondary-button' }, `Approve: ${description}`);

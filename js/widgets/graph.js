@@ -1,7 +1,7 @@
 // YUNUS OS — THE GRAPH: a 3D constellation of the selected codebase.
 // Slow earth-like spin, drag to rotate, wheel zoom, hover/click to explore
 // relations (obsidian-style). Canvas 2D with perspective projection, no libs.
-import { h, fmtInt, tickUp } from '/js/lib/ui.js';
+import { h, fmtInt, tickUp } from '../lib/ui.js';
 
 const SPIN = (Math.PI * 2) / 90_000;  // 1 revolution / 90s (rad per ms)
 const FOV = 2.6;                      // perspective strength

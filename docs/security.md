@@ -6,6 +6,16 @@ Yunus OS serves one person's workspace through a loopback HTTP service. It is no
 
 The public repository is a fresh export of generic presentation and new configurable integrations. It does not need the original private application, operational data, account state or repository history.
 
+## Static browser demo
+
+The browser demo is a separate static export with fictional repositories, graph and activity. Its explicit build allowlist includes presentation code, bundled fonts, license notices and generated-data code. It excludes the local transport, connection forms, microphone capture, server modules, native wrapper, runtime profiles and tests.
+
+Its task adapter makes no API or provider requests. It accepts only checklist changes and a read-aloud preference; live connections, credentials, binary uploads and desktop actions are rejected. The built-in summary and task commands do not invoke a model. Optional spoken replies use an installed local browser voice, if available, and start only after the user enables them and asks for a reply.
+
+Task data is validated and saved under a versioned, project-path-scoped localStorage key. Storage belongs to the browser origin, so sibling sites on the same origin and installed browser extensions are not isolated from it. Do not put secrets into demo tasks. Clearing browser site data removes saved tasks; denied storage produces a visibly temporary page session. Other open tabs reload saved state before ordinary reads and edits, but localStorage is not a transactional database and simultaneous cross-tab writes can race.
+
+The generated HTML sets a content security policy that blocks data connections. Static hosting does not inherit the local server's authentication or HTTP headers, and a CSP meta tag cannot enforce frame-ancestors. GitHub Pages serves the public assets under its own hosting and privacy policies; this is not a claim that the hosting provider collects no request data.
+
 ## HTTP boundary
 
 The server listens on 127.0.0.1. It validates the request Host against the local origin and rejects foreign Origin headers. Browser cross-site requests must not obtain a session. It does not enable cross-origin resource sharing.

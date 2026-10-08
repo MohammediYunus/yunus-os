@@ -1,5 +1,5 @@
 // YUNUS OS — GitHub Ops widget: review queue, my open PRs, recent workflow runs.
-import { h, relTime, statusDot, listRow, clamp } from '/js/lib/ui.js';
+import { h, relTime, statusDot, listRow, clamp } from '../lib/ui.js';
 
 const CI_DOT = { passing: 'ok', failing: 'crit', pending: 'warn', none: '' };
 const RUN_DOT = { success: 'ok', failure: 'crit', cancelled: '' };

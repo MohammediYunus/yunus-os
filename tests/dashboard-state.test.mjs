@@ -18,14 +18,14 @@ const dashboard = (mode, status = mode === 'demo' ? 'demo' : 'disabled') => ({
   repos: status === 'live' || status === 'demo' ? { repos: [{ dirtyFiles: 2 }] } : null,
 });
 
-async function shell({ dismissed = false, storageUnavailable = false, initialMode = 'demo' } = {}) {
+async function shell({ dismissed = false, storageUnavailable = false, initialMode = 'demo', browserDemo = false } = {}) {
   const ids = new Map(), selectors = new Map(), saved = new Map(dismissed ? [['yos-welcome-dismissed', '1']] : []);
   const get = (map, key) => { if (!map.has(key)) map.set(key, new Element()); return map.get(key); };
   const document = { getElementById: id => get(ids, id), querySelector: selector => get(selectors, selector), body: new Element() };
   const h = (tag, attributes, ...children) => { const element = new Element(); Object.assign(element, attributes); element.append(...children.flat().filter(child => child != null)); return element; };
   let config = { mode: initialMode, displayName: 'Fixture workspace', timezone: 'system' }, data = dashboard(initialMode), connectionOptions;
   const context = vm.createContext({
-    document, h, AbortController, setInterval() {}, matchMedia: () => ({ matches: true }), initTheme() {},
+    document, h, AbortController, browserDemo, setInterval() {}, matchMedia: () => ({ matches: true }), initTheme() {},
     localStorage: {
       getItem(key) { if (storageUnavailable) throw new Error('Storage unavailable'); return saved.get(key) ?? null; },
       setItem(key, value) { if (storageUnavailable) throw new Error('Storage unavailable'); saved.set(key, value); },
@@ -38,11 +38,11 @@ async function shell({ dismissed = false, storageUnavailable = false, initialMod
   // Run the real shell initialization, renderer and event handlers. Widget
   // imports are unavailable in this minimal DOM and use the shell's catch path;
   // these tests assert shell state/text, not widget rendering or visual layout.
-  const source = (await readFile(new URL('../js/main.js', import.meta.url), 'utf8'))
+  const source = (await readFile(new URL('../js/app.js', import.meta.url), 'utf8'))
     .replace(/^import .*;\r?\n/gm, '')
-    .replace(/^init\(\)\.catch\(.*$/m, '');
+    .replace('export function startApp', 'function startApp');
   vm.runInContext(source, context);
-  await vm.runInContext('init()', context);
+  await vm.runInContext('startApp({ api, connectSession, createConnections: initConnections, browserDemo })', context);
   return {
     ids, saved,
     async change(mode, status) { config = { ...config, mode }; data = dashboard(mode, status); await connectionOptions.onSaved(); },
@@ -96,4 +96,17 @@ test('welcome dismissal remains effective for the session when localStorage is u
   assert.equal(app.ids.get('welcome-strip').hidden, false);
   app.dismiss(); await app.change('live'); await app.change('demo');
   assert.equal(app.ids.get('welcome-strip').hidden, true);
+});
+
+
+test('browser demo describes its runtime and local-app path without a live-server claim', async () => {
+  const app = await shell({ browserDemo: true });
+  assert.ok(app.chips().includes('Browser demo ready'));
+  assert.ok(!app.chips().includes('Local server up'));
+  assert.equal(app.ids.get('workspace-mode').textContent, 'Browser demo');
+  assert.equal(app.ids.get('connections-open').textContent, 'About this demo');
+  assert.equal(app.ids.get('welcome-connect').textContent, 'Use on my computer');
+  app.dismiss();
+  assert.equal(app.saved.get('yos-browser-welcome-dismissed'), '1');
+  assert.equal(app.saved.has('yos-welcome-dismissed'), false);
 });

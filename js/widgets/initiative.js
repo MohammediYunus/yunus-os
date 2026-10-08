@@ -1,6 +1,6 @@
 // YUNUS OS — widget: Active Initiative (plan progress, checklist tail, recent commits).
 // Data source: data.initiative (see docs/CONTRACT.md — may be null; never throw).
-import { h, relTime, tickUp, clamp } from '/js/lib/ui.js';
+import { h, relTime, tickUp, clamp } from '../lib/ui.js';
 
 const refs = {};
 let painted = false;

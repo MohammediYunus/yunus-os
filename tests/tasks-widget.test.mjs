@@ -29,7 +29,7 @@ test('all saved tasks remain accessible in both tabs, including their actions', 
   t.after(() => { if (previousDocument === undefined) delete globalThis.document; else globalThis.document = previousDocument; });
   // Resolve the browser's root-relative helper import without changing widget code.
   const source = (await readFile(new URL('../js/widgets/tasks.js', import.meta.url), 'utf8'))
-    .replace("'/js/lib/ui.js'", JSON.stringify(new URL('../js/lib/ui.js', import.meta.url).href));
+    .replace("'../lib/ui.js'", JSON.stringify(new URL('../js/lib/ui.js', import.meta.url).href));
   const widget = (await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)).default;
   let tasks = [false, true].flatMap(done => Array.from({ length: 24 }, (_, i) => ({ id: `${done ? 'done' : 'open'}-${i + 1}`, title: `${done ? 'Done' : 'Open'} task ${i + 1}`, done, createdAt: '2026-01-01T00:00:00Z' })));
   const root = new Element('main'), calls = [];
@@ -72,7 +72,7 @@ async function keyboardFixture(t, items = [1, 2, 3].map(id => ({ id: String(id),
   document.body = new Element('body'); document.activeElement = document.body;
   t.after(() => { if (previousDocument === undefined) delete globalThis.document; else globalThis.document = previousDocument; });
   const source = (await readFile(new URL('../js/widgets/tasks.js', import.meta.url), 'utf8'))
-    .replace("'/js/lib/ui.js'", JSON.stringify(new URL('../js/lib/ui.js', import.meta.url).href));
+    .replace("'../lib/ui.js'", JSON.stringify(new URL('../js/lib/ui.js', import.meta.url).href));
   const widget = (await import(`data:text/javascript;base64,${Buffer.from(source + `\n// fixture ${++fixtureId}`).toString('base64')}`)).default;
   let tasks = items.map(item => ({ createdAt: '2026-01-01T00:00:00Z', ...item })), gate;
   const root = new Element('main'), outside = new Element('button'), calls = [];

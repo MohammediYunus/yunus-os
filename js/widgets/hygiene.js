@@ -3,7 +3,7 @@
 // Layout: primary row shows only as many WHOLE cards as fit (main repos first, then by
 // dirtiness); overflow collapses into a "+N MORE" chip that toggles a second wrapped row.
 // Recomputed on ResizeObserver — cards never clip mid-card and never run under suggestions.
-import { h, fmtInt, ageHours, statusDot, clamp } from '/js/lib/ui.js';
+import { h, fmtInt, ageHours, statusDot, clamp } from '../lib/ui.js';
 
 let mainEl = null; // column: primary row + overflow row
 let rowEl = null; // primary row (whole cards + "+N more" chip)

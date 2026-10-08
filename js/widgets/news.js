@@ -1,5 +1,5 @@
 // YUNUS OS — AI Intel widget: filterable news feed (anthropic / openai / hn / reddit).
-import { h, relTime, fmtInt, clamp, listRow } from '/js/lib/ui.js';
+import { h, relTime, fmtInt, clamp, listRow } from '../lib/ui.js';
 
 const SOURCES = ['git', 'github', 'local', 'anthropic', 'openai', 'hn', 'reddit'];
 const FILTERS = ['all', ...SOURCES];
