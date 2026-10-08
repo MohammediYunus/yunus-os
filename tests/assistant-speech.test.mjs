@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { initAssistant } from '../js/lib/assistant.js';
 
 // The real Assistant, drawer, UI helper and handlers run with a minimal DOM.
@@ -102,6 +103,7 @@ test('disabled read-aloud never starts speech and clears earlier feedback', asyn
 for (const action of ['stop', 'close']) test(`${action} and delayed cancellation callbacks are not playback failures`, async () => {
   const app = setup({ voices: [localVoice] }); await app.submit(); const utterance = app.spoken[0];
   if (action === 'stop') await app.stop(); else { app.close(); await Promise.resolve(); }
+  await nextTurn(); // Let the cancellation response settle before checking Stopped.
   for (const error of ['canceled', 'interrupted']) utterance.onerror({ error });
   assert.equal(app.snapshot().status, 'Stopped'); assert.equal(app.snapshot().stopDisabled, true);
   assert.doesNotMatch(app.snapshot().note, /could not play|failed/i);

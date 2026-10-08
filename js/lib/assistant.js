@@ -17,7 +17,7 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
   welcome.append(prompts); log.append(welcome);
   form.append(h('label', { for: 'assistant-message', class: 'microlabel' }, 'Your request'), input, h('div', { class: 'assistant-controls' }, record, stop, send), voiceNote);
   view.content.append(h('div', { class: 'assistant-meta' }, provider, h('button', { type: 'button', class: 'text-button', onclick: () => { view.dialog.close(); openConnections(); } }, 'Settings')), status, log, form);
-  let busy = false, controller = null, recorder = null, preparingMic = false, requestId = 0, speaking = false, activeUtterance = null, speechNotice = '';
+  let busy = false, cancelling = false, controller = null, recorder = null, preparingMic = false, requestId = 0, speaking = false, activeUtterance = null, speechNotice = '';
   const stopSpeech = () => {
     activeUtterance = null;
     window.webkit?.messageHandlers?.yunusSpeech?.postMessage({ cancel: true });
@@ -30,11 +30,11 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
     const enabled = !!config.voice?.enabled, available = capabilities.voice?.available !== false;
     if (!enabled) speechNotice = '';
     record.hidden = !enabled || !recordMicrophone;
-    record.disabled = busy || preparingMic || (!recorder && !available);
+    record.disabled = busy || cancelling || preparingMic || (!recorder && !available);
     record.textContent = recorder ? 'Finish recording' : preparingMic ? 'Opening microphone…' : 'Record';
     record.classList.toggle('recording', !!recorder);
-    send.disabled = busy || !!recorder || preparingMic;
-    stop.disabled = !busy && !recorder && !speaking && !preparingMic;
+    send.disabled = busy || cancelling || !!recorder || preparingMic;
+    stop.disabled = cancelling || (!busy && !recorder && !speaking && !preparingMic);
     voiceNote.textContent = speechNotice || (browserDemo ? (enabled ? 'Replies use an installed local browser voice, if available. Microphone input is available in the local app.' : 'Read-aloud is off. You can enable it in About this demo. Microphone input is available in the local app.') : !enabled ? 'Voice is off. Enable it in Connections whenever you want.' : !available ? (capabilities.voice?.reason || 'Local transcription needs Whisper and a model. Check Connections.') : 'Record up to 30 seconds. Review the transcript before sending. Replies can be spoken aloud.');
   };
   const addMessage = (role, text) => {
@@ -80,7 +80,7 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
   }
   record.addEventListener('click', async () => {
     if (recorder) { await finishRecording(); return; }
-    if (busy || preparingMic || !recordMicrophone || !getConfig().voice?.enabled) return;
+    if (busy || cancelling || preparingMic || !recordMicrophone || !getConfig().voice?.enabled) return;
     stopSpeech(); preparingMic = true; const ownId = ++requestId; status.textContent = 'Allow microphone access to start recording.'; sync();
     try {
       const session = await recordMicrophone(() => { void finishRecording(); });
@@ -90,15 +90,24 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
     finally { if (ownId === requestId) { preparingMic = false; sync(); } }
   });
   const cancel = async () => {
+    if (cancelling) return;
+    cancelling = true;
     ++requestId; controller?.abort(); controller = null; stopSpeech();
-    const captured = recorder; recorder = null; busy = false; preparingMic = false; status.textContent = 'Stopped'; sync();
-    await captured?.stop({ discard: true });
-    await api('/api/assistant/cancel', { method: 'POST', body: {} }).catch(() => {});
+    const captured = recorder; recorder = null; busy = false; preparingMic = false; status.textContent = 'Stopping…'; sync();
+    let cleanupFailed = false, cancellationFailed = false;
+    try {
+      try { await captured?.stop({ discard: true }); } catch { cleanupFailed = true; }
+      try { await api('/api/assistant/cancel', { method: 'POST', body: {} }); } catch { cancellationFailed = true; }
+    } finally {
+      cancelling = false;
+      status.textContent = cancellationFailed ? 'Stopped locally. Could not confirm server cancellation. You can try again.' : cleanupFailed ? 'Stopped. The microphone did not close cleanly. You can try recording again.' : 'Stopped';
+      sync();
+    }
   };
   stop.addEventListener('click', () => { void cancel(); });
   view.dialog.addEventListener('close', () => { if (recorder || busy || preparingMic || speaking) void cancel(); });
   form.addEventListener('submit', async event => {
-    event.preventDefault(); const message = input.value.trim(); if (!message || busy || recorder || preparingMic) return;
+    event.preventDefault(); const message = input.value.trim(); if (!message || busy || cancelling || recorder || preparingMic) return;
     busy = true; stopSpeech(); const ownId = ++requestId; controller = new AbortController(); sync();
     addMessage('user', message); input.value = ''; status.textContent = 'Working…';
     try {
