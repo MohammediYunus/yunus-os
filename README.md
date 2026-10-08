@@ -22,6 +22,15 @@ Open the local URL printed in your terminal. Leave that terminal running while u
 
 There are **no runtime npm dependencies**. The default demo uses bundled fonts and generated sample data, and does not contact providers or start assistant processes. It is a useful way to explore the interface before connecting anything.
 
+### Your first workspace
+
+Use the Yunus OS folder you just cloned to try a real project. This walkthrough uses the built-in local assistant and needs no account or API key.
+
+1. Open **Connections**. Under **Show**, choose **My workspace**, then enter the absolute path of your cloned Yunus OS folder in **Repository folders**.
+2. Keep **Provider** set to **Local workspace commands**. Click **Save connections**, then **Close** to see your repository status and code graph.
+3. Open **Assistant**, select **Give me a workspace summary**, then click **Send** to get a summary of your connected workspace.
+4. Type **Add a task: review the release checklist** and click **Send**. Click **Approve: Add task: review the release checklist**, then **Close** to see the saved task in **Local tasks**.
+
 ## Make it yours
 
 Open **Connections** in the dashboard to configure your display name and choose **My workspace** for live data. Connect only the sources you want:
