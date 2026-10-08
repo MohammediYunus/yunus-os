@@ -4,6 +4,10 @@ A local workspace for your projects, GitHub activity and daily tasks, with an op
 
 Yunus OS started as my personal dashboard. This public version keeps its interactive code graph and compact console interface, while giving each person their own configuration. It starts with clearly labeled demo data. No account, API key or package installation is needed to try it.
 
+[![Yunus OS showing a live project graph, local tasks and GitHub activity](docs/media/yunus-os-preview.webp)](https://github.com/MohammediYunus/yunus-os/releases/download/v0.1.0/yunus-os-community-1080p.mp4)
+
+[Watch the demo with sound](https://github.com/MohammediYunus/yunus-os/releases/download/v0.1.0/yunus-os-community-1080p.mp4): a real workspace, a spoken assistant reply, and a task saved after approval.
+
 ## Try it
 
 Install [Node.js 22 or newer](https://nodejs.org/), then:
