@@ -5,7 +5,7 @@ function render() {
   refs.count.textContent = String(open.length); refs.summary.textContent = `${done.length} complete · ${tasks.length} total`;
   for (const [name, button] of Object.entries(refs.tabs)) { button.classList.toggle('on', name === filter); button.setAttribute('aria-pressed', String(name === filter)); }
   const shown = filter === 'open' ? open : done;
-  refs.list.replaceChildren(...(shown.length ? shown.slice(0, 20).map(task => {
+  refs.list.replaceChildren(...(shown.length ? shown.map(task => {
     const toggle = h('input', { type: 'checkbox', checked: !!task.done, disabled: busy, 'aria-label': `${task.done ? 'Reopen' : 'Complete'} ${task.title}`, onchange: async () => { await mutate(`/api/tasks/${encodeURIComponent(task.id)}`, 'PATCH', { done: toggle.checked }); } });
     const remove = h('button', { class: 'task-remove', type: 'button', disabled: busy, 'aria-label': `Delete task: ${task.title}`, onclick: async () => { await mutate(`/api/tasks/${encodeURIComponent(task.id)}`, 'DELETE'); } }, 'Remove');
     return h('div', { class: `task-row${task.done ? ' done' : ''}` }, toggle, h('div', { class: 'task-copy' }, h('span', {}, task.title), h('small', {}, relTime(task.createdAt))), remove);
