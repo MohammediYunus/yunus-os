@@ -2,16 +2,31 @@
 const short = (value, length = 180) => String(value ?? '').replace(/\s+/g, ' ').slice(0, length);
 export function workspaceSummary(dashboard = {}) {
   const tasks = (dashboard.tasks?.items || []).filter(item => !item.done);
-  const repos = dashboard.repos?.repos || [];
-  const prs = dashboard.github?.myOpenPRs || [];
-  const reviews = dashboard.github?.reviewRequested || [];
-  const prefix = dashboard.demo ? 'Demo workspace (fictional data).' : 'Connected workspace.';
-  const lines = [prefix, `${tasks.length} open tasks; ${repos.length} repositories; ${prs.length} open pull requests; ${reviews.length} reviews requested.`];
+  const repoSource = dashboard.sources?.repos || {};
+  const githubSource = dashboard.sources?.github || {};
+  const repoRows = Array.isArray(dashboard.repos?.repos) ? dashboard.repos.repos : null;
+  const partialRepos = repoSource.status === 'error' && Boolean(repoRows?.length);
+  const hasRepos = Boolean(repoRows) && (['live', 'demo'].includes(repoSource.status) || partialRepos);
+  const repos = hasRepos ? repoRows : [];
+  const githubReady = ['live', 'demo'].includes(githubSource.status) && Array.isArray(dashboard.github?.myOpenPRs) && Array.isArray(dashboard.github?.reviewRequested);
+  const githubUser = typeof dashboard.github?.user === 'string' ? dashboard.github.user.trim() : null;
+  const hasGitHub = githubReady && Boolean(githubUser);
+  const prs = hasGitHub ? dashboard.github.myOpenPRs : [];
+  const reviews = hasGitHub ? dashboard.github.reviewRequested : [];
+  const prefix = dashboard.demo ? 'Demo workspace (fictional data).' : 'Your workspace.';
+  const counts = [`${tasks.length} open task${tasks.length === 1 ? '' : 's'}`];
+  if (hasRepos) counts.push(`${repos.length} ${repos.length === 1 ? 'repository' : 'repositories'}${partialRepos ? ' available (partial)' : ''}`);
+  if (hasGitHub) counts.push(`${prs.length} open pull request${prs.length === 1 ? '' : 's'}`, `${reviews.length} review${reviews.length === 1 ? '' : 's'} requested`);
+  const lines = [prefix, counts.join('; ') + '.'];
   for (const task of tasks.slice(0, 12)) lines.push(`Task: ${short(task.title)}`);
   for (const repo of repos.slice(0, 12)) lines.push(`Repository: ${short(repo.name, 70)}; branch ${short(repo.branch, 70)}; ${Number(repo.dirtyFiles) || 0} changed files.`);
   for (const pr of prs.slice(0, 8)) lines.push(`Pull request: ${short(pr.title)}; CI ${short(pr.ci || 'unknown', 20)}.`);
-  const unavailable = Object.entries(dashboard.sources || {}).filter(([, source]) => ['error', 'disabled'].includes(source.status)).map(([name]) => name);
-  if (unavailable.length) lines.push(`Unavailable sources: ${unavailable.join(', ')}. Do not infer their state.`);
+  if (!hasRepos) lines.push(`Local repositories ${repoSource.status === 'disabled' ? 'not connected' : 'unavailable'}.${repoSource.message ? ' ' + short(repoSource.message) : ''}`);
+  else if (partialRepos && repoSource.message) lines.push(`Repository status: ${short(repoSource.message)}`);
+  if (githubReady && githubUser === '') lines.push('GitHub pull requests and reviews: no username configured.');
+  else if (!hasGitHub) lines.push(`GitHub ${githubSource.status === 'disabled' ? 'not connected' : 'unavailable'}.${githubSource.message ? ' ' + short(githubSource.message) : ''}`);
+  const unavailable = Object.entries(dashboard.sources || {}).filter(([name, source]) => !['github', 'repos'].includes(name) && ['error', 'disabled'].includes(source.status)).map(([name]) => short(name, 70));
+  if (unavailable.length) lines.push(`Other sources needing setup or attention: ${unavailable.join(', ')}.`);
   return lines.join('\n');
 }
 

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createAssistant, runTextProcess, workspaceSummary } from '../lib/assistant.mjs';
 
-const dashboard = { demo: false, tasks: { items: [{ title: 'Review release notes', done: false }, { title: 'Already finished', done: true }] }, repos: { repos: [{ name: 'orbit', path: '/private/unrelated', branch: 'main', dirtyFiles: 3 }] }, github: { myOpenPRs: [{ title: 'Fix focus handling', ci: 'failing' }], reviewRequested: [] }, sources: { github: { status: 'error' } } };
+const dashboard = { demo: false, tasks: { items: [{ title: 'Review release notes', done: false }, { title: 'Already finished', done: true }] }, repos: { repos: [{ name: 'orbit', path: '/private/unrelated', branch: 'main', dirtyFiles: 3 }] }, github: { user: 'fixture-user', myOpenPRs: [{ title: 'Fix focus handling', ci: 'failing' }], reviewRequested: [] }, sources: { repos: { status: 'live' }, github: { status: 'live' } } };
 
 test('local assistant uses real passed dashboard and distinguishes demo without invoking providers', async () => {
   let fetches = 0;
@@ -17,7 +17,7 @@ test('local assistant uses real passed dashboard and distinguishes demo without 
   assert.equal(fetches, 0);
   assert.match(workspaceSummary({ ...dashboard, demo: true }), /fictional data/);
   assert.doesNotMatch(workspaceSummary(dashboard), /private\/unrelated/);
-  assert.match(workspaceSummary(dashboard), /Unavailable sources: github/);
+  assert.match(workspaceSummary({ ...dashboard, sources: { ...dashboard.sources, github: { status: 'error' } } }), /GitHub unavailable/);
 });
 
 test('actions are narrowly proposed and never executed', async () => {

@@ -1,6 +1,6 @@
 {
   "name": "yunus-os",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "A local command center for your projects, GitHub and voice assistant.",
   "type": "module",
