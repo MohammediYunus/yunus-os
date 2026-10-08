@@ -50,6 +50,8 @@ Try **Add a task: review the release checklist** with the local assistant. It pr
 
 Local Whisper needs an installed executable and a model file you supply. Downloading a model and installing optional tools are separate steps; Yunus OS does not silently download them. Microphone access is requested when you use recording. Browser and operating-system support varies.
 
+On Windows, install the native executables and add their folders to PATH, or set their absolute paths in Connections. The default names find claude.exe and whisper-cli.exe automatically. Native .com programs are also supported; .cmd, .bat, PowerShell and npm shell wrappers cannot be used as provider executables. Yunus OS launches providers directly without a command shell.
+
 The first public release supports approved app-opening actions. **It does not ship an autonomous computer operator** that clicks around your desktop. It has no email integration, mailbox actions or email draft creation.
 
 ## Configuration and privacy

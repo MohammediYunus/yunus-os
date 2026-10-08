@@ -116,6 +116,7 @@ test('fresh HOME starts a usable demo without credentials, network or subprocess
   const health = await request('/api/health');
   assert.equal(health.status, 200);
   assert.equal(health.json.ok, true);
+  assert.equal(health.json.version, JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version);
   assert.ok(!health.text.includes(configDir));
   const data = await request('/api/all', { headers: authenticated() });
   assert.equal(data.status, 200);

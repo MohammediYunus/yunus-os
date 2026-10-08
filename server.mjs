@@ -49,6 +49,7 @@ async function jsonBody(req) {
 }
 export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {}) {
   const store = await createConfigStore(configDir), files = await staticFiles();
+  const { version } = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const dashboard = createDashboard({ store, fetchImpl });
   const assistant = createAssistant({ getConfig: store.get, getDashboard: () => dashboard.load() });
   const token = randomBytes(32).toString('hex');
@@ -81,7 +82,7 @@ export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {})
         if (decoded.includes('\\') || decoded.includes('\0') || decoded.split('/').some(part => part === '..' || part.startsWith('.'))) { send(404, { error: 'Not found' }); return; }
         pathname = new URL(req.url, origin).pathname;
       } catch { send(400, { error: 'Invalid path' }); return; }
-      if (['GET', 'HEAD'].includes(req.method) && pathname === '/api/health') { send(200, { ok: true, app: 'yunus-os-community', version: '0.1.0' }); return; }
+      if (['GET', 'HEAD'].includes(req.method) && pathname === '/api/health') { send(200, { ok: true, app: 'yunus-os-community', version }); return; }
       if (req.method === 'GET' && pathname === '/api/session') { send(200, { token }); return; }
       if (!pathname.startsWith('/api/')) {
         if (!['GET', 'HEAD'].includes(req.method)) { send(405, { error: 'Method not allowed' }); return; }
