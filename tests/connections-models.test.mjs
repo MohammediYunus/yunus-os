@@ -124,3 +124,46 @@ test('Connections distinguishes a saved config from a failed workspace check and
   assert.equal(saves, 3);
   assert.match(status.textContent, /Connections saved. You can close this panel/);
 });
+
+test('Connections saves optional speech credentials without echoing them or generating audio', async t => {
+  const previousDocument = globalThis.document, previousFetch = globalThis.fetch;
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'yos-connections-speech-'));
+  const store = await createConfigStore(directory); let config = publicConfig(store.get());
+  const requests = [];
+  globalThis.document = { body: new Element('body'), createElement: tag => new Element(tag), createTextNode: text => new Element('#text', text) };
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/session') return { ok: true, json: async () => ({ token: 'fixture-session' }) };
+    assert.equal(url, '/api/config', 'Opening and saving settings must not request speech');
+    const body = JSON.parse(options.body); requests.push(body);
+    return { ok: true, json: async () => ({ config: await store.save(body) }) };
+  };
+  t.after(async () => { globalThis.fetch = previousFetch; if (previousDocument === undefined) delete globalThis.document; else globalThis.document = previousDocument; await rm(directory, { recursive: true, force: true }); });
+  const view = initConnections({ getConfig: () => config, onSaved: async () => { config = publicConfig(store.get()); return { sources: { repos: { status: 'disabled' } } }; } });
+  view.open();
+  const elements = descendants(document.body), field = name => elements.find(el => el.name === name);
+  const output = field('outputProvider'), key = field('elevenlabsApiKey'), clear = field('clearElevenlabsApiKey');
+  assert.equal(output.value, 'system'); assert.ok(hidden(key));
+  output.value = 'elevenlabs'; output.listeners.change();
+  assert.ok(!hidden(key)); assert.match(document.body.textContent, /paused in Demo workspace/);
+  field('mode').value = 'live'; field('mode').listeners.change();
+  assert.match(document.body.textContent, /reply text is sent to ElevenLabs/);
+  assert.match(document.body.textContent, /uses your credits|using your credits/);
+  key.value = 'fixture-speech-secret'; field('elevenlabsVoiceId').value = 'fixtureVoice';
+  const form = elements.find(el => el.tagName === 'form');
+  await form.listeners.submit({ preventDefault() {} });
+  assert.equal(store.get().voice.elevenlabsApiKey, 'fixture-speech-secret');
+  assert.equal(key.value, ''); assert.equal(config.voice.hasElevenlabsApiKey, true);
+  assert.doesNotMatch(JSON.stringify(config), /fixture-speech-secret/);
+  view.open(); assert.equal(key.value, ''); assert.match(document.body.textContent, /An ElevenLabs key is saved/);
+  await form.listeners.submit({ preventDefault() {} });
+  assert.equal('elevenlabsApiKey' in requests.at(-1).voice, false);
+  assert.equal(store.get().voice.elevenlabsApiKey, 'fixture-speech-secret');
+  clear.checked = true; key.value = 'discard-this-value';
+  await form.listeners.submit({ preventDefault() {} });
+  assert.equal(requests.at(-1).voice.clearElevenlabsApiKey, true);
+  assert.equal('elevenlabsApiKey' in requests.at(-1).voice, false);
+  assert.equal(store.get().voice.elevenlabsApiKey, ''); assert.equal(clear.checked, false);
+  assert.match(document.body.textContent, /No ElevenLabs key saved/);
+  key.value = 'unsaved-secret'; elements.find(el => el.tagName === 'dialog').listeners.close();
+  assert.equal(key.value, '', 'Closing the drawer clears an unsaved key');
+});

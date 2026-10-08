@@ -12,19 +12,42 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
   const send = h('button', { type: 'submit', class: 'primary-button' }, 'Send');
   const record = h('button', { type: 'button', class: 'secondary-button' }, 'Record');
   const stop = h('button', { type: 'button', class: 'secondary-button', disabled: true }, 'Stop');
+  const playReply = h('button', { type: 'button', class: 'secondary-button', hidden: true }, 'Play reply');
   const voiceNote = h('p', { class: 'field-help', role: 'status', 'aria-live': 'polite' });
   const prompts = h('div', { class: 'prompt-buttons' }, ...['Give me a workspace summary', 'Show my tasks', 'Add a task: review the release checklist'].map(text => h('button', { type: 'button', class: 'prompt-button', onclick: () => { input.value = text; input.focus(); } }, text)));
   welcome.append(prompts); log.append(welcome);
-  form.append(h('label', { for: 'assistant-message', class: 'microlabel' }, 'Your request'), input, h('div', { class: 'assistant-controls' }, record, stop, send), voiceNote);
+  form.append(h('label', { for: 'assistant-message', class: 'microlabel' }, 'Your request'), input, h('div', { class: 'assistant-controls' }, record, stop, send), voiceNote, playReply);
   view.content.append(h('div', { class: 'assistant-meta' }, provider, h('button', { type: 'button', class: 'text-button', onclick: () => { view.dialog.close(); openConnections(); } }, 'Settings')), status, log, form);
   let busy = false, cancelling = false, controller = null, recorder = null, preparingMic = false, requestId = 0, speaking = false, activeUtterance = null, speechNotice = '';
+  let speechController = null, speechAudio = null, speechUrl = null, speechId = 0, voiceSettings = null, playbackBlocked = false;
+  const outputProvider = () => browserDemo ? 'system' : getConfig().voice?.outputProvider || 'system';
+  const settingsKey = () => {
+    const config = getConfig(), voice = config.voice || {};
+    return JSON.stringify([!!voice.enabled, outputProvider(), config.mode, voice.elevenlabsVoiceId, voice.elevenlabsModel, voice.hasElevenlabsApiKey]);
+  };
+  const releaseAudio = () => {
+    if (speechAudio) {
+      speechAudio.onended = null; speechAudio.onerror = null;
+      speechAudio.pause(); speechAudio.removeAttribute('src'); speechAudio.load(); speechAudio = null;
+    }
+    if (speechUrl) { URL.revokeObjectURL(speechUrl); speechUrl = null; }
+    playbackBlocked = false;
+  };
   const stopSpeech = () => {
+    ++speechId;
+    if (speechController || speechAudio) speechNotice = '';
+    speechController?.abort(); speechController = null; releaseAudio();
     activeUtterance = null;
     window.webkit?.messageHandlers?.yunusSpeech?.postMessage({ cancel: true });
     window.speechSynthesis?.cancel(); speaking = false;
   };
   const sync = () => {
     const config = getConfig(), capabilities = getCapabilities();
+    const currentSettings = settingsKey();
+    if (voiceSettings !== null && voiceSettings !== currentSettings) { stopSpeech(); speechNotice = ''; }
+    voiceSettings = currentSettings;
+    playReply.hidden = !playbackBlocked;
+    playReply.disabled = busy || cancelling || speaking;
     const names = { local: 'Local commands', ollama: 'Ollama', claude: 'Claude CLI' };
     provider.textContent = browserDemo ? 'Demo commands · no model' : names[config.assistant?.provider] || 'Local commands';
     const enabled = !!config.voice?.enabled, available = capabilities.voice?.available !== false;
@@ -34,17 +57,76 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
     record.textContent = recorder ? 'Finish recording' : preparingMic ? 'Opening microphone…' : 'Record';
     record.classList.toggle('recording', !!recorder);
     send.disabled = busy || cancelling || !!recorder || preparingMic;
-    stop.disabled = cancelling || (!busy && !recorder && !speaking && !preparingMic);
-    voiceNote.textContent = speechNotice || (browserDemo ? (enabled ? 'Replies use an installed local browser voice, if available. Microphone input is available in the local app.' : 'Read-aloud is off. You can enable it in About this demo. Microphone input is available in the local app.') : !enabled ? 'Voice is off. Enable it in Connections whenever you want.' : !available ? (capabilities.voice?.reason || 'Local transcription needs Whisper and a model. Check Connections.') : 'Record up to 30 seconds. Review the transcript before sending. Replies can be spoken aloud.');
+    stop.disabled = cancelling || (!busy && !recorder && !speaking && !preparingMic && !speechAudio && !speechController);
+    const speechHelp = outputProvider() === 'elevenlabs'
+      ? capabilities.speech?.available === false ? `ElevenLabs spoken replies: ${capabilities.speech.reason || 'Check Connections to finish setup.'}` : 'Spoken replies use ElevenLabs.'
+      : 'Spoken replies use an available local system voice.';
+    const microphoneHelp = available ? 'Record up to 30 seconds. Review the transcript before sending.' : `Microphone input is unavailable. ${capabilities.voice?.reason || 'Local transcription needs Whisper and a model. Check Connections.'}`;
+    voiceNote.textContent = speechNotice || (browserDemo ? (enabled ? 'Replies use an installed local browser voice, if available. Microphone input is available in the local app.' : 'Read-aloud is off. You can enable it in About this demo. Microphone input is available in the local app.') : !enabled ? 'Voice is off. Enable it in Connections whenever you want.' : `${speechHelp} ${microphoneHelp}`);
   };
   const addMessage = (role, text) => {
     if (welcome.isConnected) welcome.remove();
     const entry = h('article', { class: `message ${role}` }, h('div', { class: 'message-author' }, role === 'user' ? 'You' : 'Assistant'), h('div', { class: 'message-text' }, text));
     log.append(entry); entry.scrollIntoView({ block: 'nearest', behavior: 'auto' }); return entry;
   };
+  const playAudio = async ownId => {
+    const audio = speechAudio;
+    if (!audio || ownId !== speechId) return;
+    playbackBlocked = false; speaking = true; speechNotice = 'Playing your ElevenLabs spoken reply…'; sync();
+    if (ownId !== speechId || speechAudio !== audio) return;
+    try { await audio.play(); }
+    catch (error) {
+      if (ownId !== speechId || speechAudio !== audio) return;
+      speaking = false;
+      if (error.name === 'NotAllowedError') {
+        playbackBlocked = true; speechNotice = 'Your ElevenLabs reply is ready. Press Play reply to hear it.';
+      } else {
+        releaseAudio(); speechNotice = 'The ElevenLabs audio could not be played. Your written reply is still available.';
+      }
+      sync();
+    }
+  };
+  playReply.addEventListener('click', () => {
+    if (!playbackBlocked || busy || cancelling || speaking) return;
+    void playAudio(speechId);
+  });
+  const sayWithElevenLabs = async text => {
+    const capability = getCapabilities().speech;
+    if (getConfig().mode !== 'live' || capability?.available === false) {
+      speechNotice = capability?.reason || 'ElevenLabs speech needs My workspace mode and a connection in Settings. Your written reply is still available.'; sync(); return;
+    }
+    const ownId = speechId, selectedSettings = settingsKey();
+    speechController = new AbortController(); speaking = true;
+    speechNotice = 'Generating your spoken reply with ElevenLabs…'; sync();
+    let generated = false;
+    try {
+      const blob = await api('/api/speech', { method: 'POST', body: { text }, signal: speechController.signal, responseType: 'blob' });
+      if (ownId !== speechId) return;
+      if (selectedSettings !== settingsKey()) { sync(); return; }
+      speechController = null; generated = true;
+      speechUrl = URL.createObjectURL(blob); speechAudio = new Audio(speechUrl);
+      const audio = speechAudio;
+      audio.onended = () => {
+        if (ownId !== speechId || speechAudio !== audio) return;
+        releaseAudio(); speaking = false; speechNotice = 'ElevenLabs spoken reply finished.'; sync();
+      };
+      audio.onerror = () => {
+        if (ownId !== speechId || speechAudio !== audio) return;
+        releaseAudio(); speaking = false; speechNotice = 'The ElevenLabs audio could not be played. Your written reply is still available.'; sync();
+      };
+      await playAudio(ownId);
+    } catch (error) {
+      if (ownId !== speechId) return;
+      if (selectedSettings !== settingsKey()) { sync(); return; }
+      speechController = null; releaseAudio(); speaking = false;
+      const reason = typeof error?.message === 'string' ? ` ${error.message.slice(0, 300)}` : '';
+      speechNotice = generated ? 'The ElevenLabs audio could not be played. Your written reply is still available.' : `ElevenLabs could not generate the spoken reply.${reason} Your written reply is still available.`; sync();
+    }
+  };
   const say = text => {
     if (!getConfig().voice?.enabled) return;
     speechNotice = ''; stopSpeech();
+    if (outputProvider() === 'elevenlabs') { void sayWithElevenLabs(text); return; }
     const failed = () => { activeUtterance = null; speaking = false; speechNotice = 'The browser could not play the spoken reply. Your reply is shown above. You can try again.'; sync(); };
     const native = window.webkit?.messageHandlers?.yunusSpeech;
     if (native) { native.postMessage({ text }); speaking = true; sync(); return; }
@@ -105,7 +187,7 @@ export function initAssistant({ api, recordMicrophone = null, browserDemo = fals
     }
   };
   stop.addEventListener('click', () => { void cancel(); });
-  view.dialog.addEventListener('close', () => { if (recorder || busy || preparingMic || speaking) void cancel(); });
+  view.dialog.addEventListener('close', () => { if (recorder || busy || preparingMic || speaking || speechAudio || speechController) void cancel(); });
   form.addEventListener('submit', async event => {
     event.preventDefault(); const message = input.value.trim(); if (!message || busy || cancelling || recorder || preparingMic) return;
     busy = true; stopSpeech(); const ownId = ++requestId; controller = new AbortController(); sync();

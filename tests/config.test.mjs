@@ -41,6 +41,43 @@ test('blank token keeps credential, explicit clear wins, and invalid patches nev
   });
 });
 
+test('ElevenLabs settings preserve blank credentials, redact public values and clear explicitly', async () => {
+  await temporary(async directory => {
+    const store = await createConfigStore(directory);
+    assert.equal(store.get().voice.outputProvider, 'system');
+    assert.equal(store.get().voice.elevenlabsModel, 'eleven_multilingual_v2');
+    const saved = await store.save({ voice: { outputProvider: 'elevenlabs', elevenlabsApiKey: 'fixture-speech-key', elevenlabsVoiceId: 'fixtureVoice_1', elevenlabsModel: 'eleven_flash_v2_5' } });
+    assert.equal(saved.voice.hasElevenlabsApiKey, true);
+    assert.equal('elevenlabsApiKey' in saved.voice, false);
+    assert.doesNotMatch(JSON.stringify(saved), /fixture-speech-key/);
+    saved.voice.elevenlabsVoiceId = 'mutated';
+    await store.save({ voice: { elevenlabsApiKey: '   ' } });
+    const reopened = await createConfigStore(directory);
+    assert.equal(reopened.get().voice.elevenlabsApiKey, 'fixture-speech-key');
+    assert.equal(reopened.get().voice.elevenlabsVoiceId, 'fixtureVoice_1');
+    assert.equal(reopened.get().voice.elevenlabsModel, 'eleven_flash_v2_5');
+    for (const voice of [
+      { clearElevenlabsApiKey: 'true' }, { elevenlabsApiKey: null }, { elevenlabsApiKey: 'key\nheader' },
+      { outputProvider: 'other' }, { elevenlabsVoiceId: '../voice' }, { elevenlabsVoiceId: 'voice?query=1' },
+      { elevenlabsModel: '' }, { elevenlabsModel: 'model name' }, { elevenlabsModel: '../model' },
+    ]) await assert.rejects(reopened.save({ voice }));
+    assert.equal(reopened.get().voice.elevenlabsApiKey, 'fixture-speech-key');
+    const cleared = await reopened.save({ voice: { elevenlabsApiKey: 'old-form-value', clearElevenlabsApiKey: true } });
+    assert.equal(cleared.voice.hasElevenlabsApiKey, false);
+    assert.equal(JSON.parse(await readFile(path.join(directory, 'config.json'))).voice.elevenlabsApiKey, '');
+  });
+});
+
+test('older voice settings gain system output defaults without enabling cloud speech', async () => {
+  await temporary(async directory => {
+    await writeFile(path.join(directory, 'config.json'), JSON.stringify({ voice: { enabled: true, whisperExecutable: 'custom-whisper', whisperModelPath: '/fixture/model' } }));
+    const store = await createConfigStore(directory);
+    assert.equal(store.get().voice.outputProvider, 'system');
+    assert.equal(store.get().voice.elevenlabsApiKey, '');
+    assert.equal(store.get().voice.whisperExecutable, 'custom-whisper');
+  });
+});
+
 test('settings reject invalid types, remote provider endpoints and control characters', () => {
   for (const value of [null, [], 'text']) assert.throws(() => validateConfig(value), /object/);
   for (const value of [

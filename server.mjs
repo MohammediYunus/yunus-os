@@ -10,6 +10,7 @@ import { createConfigStore, publicConfig } from './lib/config.mjs';
 import { createDashboard } from './lib/connectors.mjs';
 import { createAssistant } from './lib/assistant.mjs';
 import { transcribe, voiceCapabilities, cancelVoice } from './lib/voice.mjs';
+import { createSpeech, speechCapabilities } from './lib/speech.mjs';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const exec = promisify(execFile);
@@ -52,11 +53,13 @@ export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {})
   const { version } = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const dashboard = createDashboard({ store, fetchImpl });
   const assistant = createAssistant({ getConfig: store.get, getDashboard: () => dashboard.load() });
+  const speech = createSpeech({ getConfig: store.get, fetchImpl });
   const token = randomBytes(32).toString('hex');
   const tokenBytes = Buffer.from(token);
   const active = new Set();
+  const speechJobs = new Set();
   let origin = '', origins = new Set(), hosts = new Set();
-  const capabilities = async () => ({ assistant: await assistant.capabilities(), voice: await voiceCapabilities(store.get()), desktop: { available: process.platform === 'darwin', apps: APPS } });
+  const capabilities = async () => ({ assistant: await assistant.capabilities(), voice: await voiceCapabilities(store.get()), speech: speechCapabilities(store.get()), desktop: { available: process.platform === 'darwin', apps: APPS } });
   function authorized(req) {
     const provided = req.headers['x-yunus-token'];
     if (typeof provided !== 'string') return false;
@@ -72,7 +75,7 @@ export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {})
       res.writeHead(status, { 'Content-Type': type });
       res.end(req.method === 'HEAD' ? undefined : type.startsWith('application/json') ? JSON.stringify(data) : data);
     };
-    let controller;
+    let controller, speechController;
     try {
       if (!hosts.has(req.headers.host)) { send(403, { error: 'Invalid local host' }); return; }
       if ((req.headers.origin && !origins.has(req.headers.origin)) || req.headers['sec-fetch-site'] === 'cross-site') { send(403, { error: 'Cross-origin access is not allowed' }); return; }
@@ -93,7 +96,7 @@ export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {})
       if (!authorized(req)) { send(401, { code: 'LOCAL_SESSION_EXPIRED', error: 'Open Yunus OS locally to start a session' }); return; }
       if (pathname === '/api/config' && req.method === 'GET') { send(200, { config: publicConfig(store.get()), capabilities: await capabilities() }); return; }
       if (pathname === '/api/config' && req.method === 'POST') {
-        await store.save(await jsonBody(req)); assistant.cancel(); cancelVoice();
+        await store.save(await jsonBody(req)); assistant.cancel(); cancelVoice(); for (const job of speechJobs) job.abort(); speech.cancel();
         send(200, { config: publicConfig(store.get()), capabilities: await capabilities() }); return;
       }
       if (pathname === '/api/all' && req.method === 'GET') { send(200, await dashboard.load()); return; }
@@ -103,7 +106,13 @@ export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {})
         const data = await jsonBody(req); const task = await store.updateTask(pathname.split('/').at(-1), data, req.method === 'DELETE'); send(200, { ok: true, task }); return;
       }
       if (pathname === '/api/assistant/cancel' && req.method === 'POST') {
-        await jsonBody(req); for (const job of active) job.abort(); assistant.cancel(); cancelVoice(); send(200, { ok: true }); return;
+        await jsonBody(req); for (const job of active) job.abort(); for (const job of speechJobs) job.abort(); assistant.cancel(); cancelVoice(); speech.cancel(); send(200, { ok: true }); return;
+      }
+      if (pathname === '/api/speech' && req.method === 'POST') {
+        speechController = new AbortController(); speechJobs.add(speechController);
+        res.on('close', () => { if (!res.writableEnded) speechController.abort(); });
+        const data = await jsonBody(req);
+        send(200, await speech.speak(data.text, { signal: speechController.signal }), 'audio/mpeg'); return;
       }
       if (pathname === '/api/assistant' && req.method === 'POST') {
         const data = await jsonBody(req);
@@ -141,14 +150,14 @@ export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {})
     } catch (error) {
       const safe = error.code || /token|secret|authorization|bearer/i.test(error.message || '') ? 'Could not complete this request. Check your settings and try again.' : String(error.message || 'Request failed').slice(0, 240);
       send(error.status || (error.name === 'AbortError' ? 409 : 400), { error: safe });
-    } finally { if (controller) active.delete(controller); }
+    } finally { if (controller) active.delete(controller); if (speechController) speechJobs.delete(speechController); }
   });
   server.requestTimeout = 30000; server.headersTimeout = 10000;
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
   origin = `http://127.0.0.1:${server.address().port}`;
   origins = new Set([origin, `http://localhost:${server.address().port}`]);
   hosts = new Set([...origins].map(url => new URL(url).host));
-  return { server, origin, close: async () => { for (const controller of active) controller.abort(); assistant.cancel(); cancelVoice(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); } };
+  return { server, origin, close: async () => { for (const controller of active) controller.abort(); for (const controller of speechJobs) controller.abort(); assistant.cancel(); cancelVoice(); speech.cancel(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); } };
 }
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
   const port = Number(process.env.YOS_PORT ?? 4173);

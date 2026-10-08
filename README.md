@@ -60,7 +60,7 @@ Open **Connections** in the dashboard to configure your display name and choose 
 | GitHub | Your username and selected owner/repository names | Reads project activity through the GitHub API. A token is optional for public data; private repositories require your own suitably scoped token. |
 | Tasks | Add tasks in the dashboard | Stores your checklist on this computer. These are local tasks, not mailbox or GitHub writes. |
 | Assistant | Start with the built-in local provider | Answers supported workspace questions without a model account. Optional Ollama or Claude CLI support uses the provider you configure. |
-| Voice | Optional local Whisper installation and model | Transcribes recordings on this computer. Spoken output uses native macOS speech or an installed local browser voice. |
+| Voice | System voice, or your own ElevenLabs key and voice ID; optional local Whisper for input | Reads assistant replies aloud. System speech and Whisper stay local; explicitly enabled ElevenLabs output sends reply text to ElevenLabs and uses your credits. |
 
 Demo and live data are distinguished in the interface. A disabled or failing connector stays visibly disabled or failed; it does not silently fill the panel with sample activity.
 
@@ -88,6 +88,16 @@ Try **Add a task: review the release checklist** with the local assistant. It pr
 
 Local Whisper needs an installed executable and a model file you supply. Downloading a model and installing optional tools are separate steps; Yunus OS does not silently download them. Microphone access is requested when you use recording. Browser and operating-system support varies.
 
+Spoken replies work with typed requests, independently of Whisper. **System voice** is the default and uses installed local speech. For optional ElevenLabs output:
+
+1. Create a dedicated API key in your ElevenLabs account with text-to-speech access and a small credit quota. Copy a voice ID you can use. Keep the key out of chat messages, source code and shared app connections.
+2. In **Connections**, choose **My workspace**, enable voice and select **ElevenLabs** under **Spoken replies**. Enter the key and voice ID. The default speech model is **eleven_multilingual_v2**; another supported text-to-speech model ID can be entered.
+3. Save, then send a short typed request in Assistant. Its displayed reply text is sent to ElevenLabs for speech. Saving settings, opening the app and checking capabilities do not generate audio.
+
+ElevenLabs output requires internet access and consumes your provider credits. It is disabled in **Demo workspace** and unavailable in the static browser demo. The API key stays in the local server's profile and is never returned by the settings API. Leave the key blank to keep it, or use **Remove saved ElevenLabs key** to clear it. Revoke it separately in ElevenLabs when it is no longer needed.
+
+Speech requests are limited to 4,000 characters and are not automatically retried after a provider failure. Replies stay readable if speech fails. If the browser blocks playback, **Play reply** plays the already-generated audio without another synthesis request. **Stop**, closing Assistant or sending a new request stops the old audio. Stopping cannot undo credits already consumed. No cloud error silently switches to a system voice.
+
 On Windows, install the native executables and add their folders to PATH, or set their absolute paths in Connections. The default names find claude.exe and whisper-cli.exe automatically. Native .com programs are also supported; .cmd, .bat, PowerShell and npm shell wrappers cannot be used as provider executables. Yunus OS launches providers directly without a command shell.
 
 The first public release supports approved app-opening actions. **It does not ship an autonomous computer operator** that clicks around your desktop. It has no email integration, mailbox actions or email draft creation.
@@ -96,7 +106,7 @@ The first public release supports approved app-opening actions. **It does not sh
 
 The server listens only on the loopback interface. Keep it local; putting it behind a public proxy or binding it to your network is not a supported deployment.
 
-Configuration is stored outside this repository, under ~/.config/yunus-os by default. The server applies private directory and file permissions on systems that support POSIX modes. GitHub tokens remain on the server and are omitted from browser API responses. The dashboard only receives a flag indicating whether a token has been saved.
+Configuration is stored outside this repository, under ~/.config/yunus-os by default. The server applies private directory and file permissions on systems that support POSIX modes. GitHub tokens and ElevenLabs keys remain on the server and are omitted from browser API responses. The dashboard only receives flags indicating whether credentials have been saved.
 
 To isolate another profile or choose a port:
 
