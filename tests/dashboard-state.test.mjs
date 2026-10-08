@@ -23,6 +23,7 @@ async function shell({ dismissed = false, storageUnavailable = false, initialMod
   const get = (map, key) => { if (!map.has(key)) map.set(key, new Element()); return map.get(key); };
   const document = { getElementById: id => get(ids, id), querySelector: selector => get(selectors, selector), body: new Element() };
   const h = (tag, attributes, ...children) => { const element = new Element(); Object.assign(element, attributes); element.append(...children.flat().filter(child => child != null)); return element; };
+  let connectionsOpened = 0;
   let config = { mode: initialMode, displayName: 'Fixture workspace', timezone: 'system' }, data = dashboard(initialMode), connectionOptions;
   const context = vm.createContext({
     document, h, AbortController, browserDemo, setInterval() {}, matchMedia: () => ({ matches: true }), initTheme() {},
@@ -32,7 +33,7 @@ async function shell({ dismissed = false, storageUnavailable = false, initialMod
     },
     api: async route => route === '/api/config' ? { config, capabilities: {} } : data,
     connectSession: async () => {},
-    initConnections: options => { connectionOptions = options; return { open() {} }; },
+    initConnections: options => { connectionOptions = options; return { open() { connectionsOpened++; } }; },
     initAssistant: () => ({ sync() {}, open() {} }),
   });
   // Run the real shell initialization, renderer and event handlers. Widget
@@ -45,6 +46,8 @@ async function shell({ dismissed = false, storageUnavailable = false, initialMod
   await vm.runInContext('startApp({ api, connectSession, createConnections: initConnections, browserDemo })', context);
   return {
     ids, saved,
+    connectionsOpened: () => connectionsOpened,
+    async update(next) { data = next; config = { ...config, mode: next.mode }; return connectionOptions.onSaved(); },
     async change(mode, status) { config = { ...config, mode }; data = dashboard(mode, status); await connectionOptions.onSaved(); },
     chips: () => ids.get('system-chips').children.map(child => child.textContent),
     dismiss: () => ids.get('welcome-dismiss').listeners.click(),
@@ -109,4 +112,24 @@ test('browser demo describes its runtime and local-app path without a live-serve
   app.dismiss();
   assert.equal(app.saved.get('yos-browser-welcome-dismissed'), '1');
   assert.equal(app.saved.has('yos-welcome-dismissed'), false);
+});
+
+
+test('all failed repositories keep setup guidance visible and can reopen Connections', async () => {
+  const app = await shell(), value = dashboard('live', 'error');
+  value.sources.repos.problems = [{ path: '/example/project', code: 'git-missing', message: 'Install Git, then restart Yunus OS.' }];
+  value.sources.graph.problems = value.sources.repos.problems;
+  const returned = await app.update(value);
+  assert.equal(returned, value, 'Connections receives the checked dashboard result');
+  for (const widget of ['hygiene', 'graph']) {
+    const notice = app.ids.get(`panel-${widget}`).children.find(child => child.class === 'source-notice');
+    assert.equal(notice.hidden, false); assert.equal(app.ids.get(`panel-${widget}`).children.find(child => child.id === `body-${widget}`).hidden, true);
+    assert.match(notice.textContent, /example\/project/); assert.match(notice.textContent, /Install Git/);
+    const edit = notice.children.find(child => child.textContent === 'Edit connections');
+    assert.equal(edit.type, 'button'); edit.onclick();
+  }
+  assert.equal(app.connectionsOpened(), 2);
+  value.repos = { repos: [{ dirtyFiles: 1 }] };
+  await app.update(value);
+  assert.equal(app.ids.get('panel-hygiene').children.find(child => child.id === 'body-hygiene').hidden, false, 'Partial repository data stays visible');
 });

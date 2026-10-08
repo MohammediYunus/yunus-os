@@ -67,7 +67,13 @@ export function startApp({ api, connectSession, createConnections, recordMicroph
       const partialData = source?.status === 'error' && ((widget.id === 'hygiene' && data.repos?.repos?.length) || (widget.id === 'graph' && data.graph?.nodes?.length));
       ctx.notice.hidden = !unavailable; ctx.el.hidden = unavailable && !partialData;
       ctx.notice.classList.toggle('error', source?.status === 'error');
-      if (unavailable) ctx.notice.replaceChildren(h('p', {}, source.message || (source.status === 'disabled' ? 'Connect this source to see your activity.' : 'This source could not refresh.')), h('button', { type: 'button', class: 'text-button', onclick: () => source.status === 'disabled' ? connections.open() : void loadData({ refresh: true }) }, source.status === 'disabled' ? 'Open connections' : 'Try again'));
+      if (unavailable) {
+        const problems = source.problems || [];
+        ctx.notice.replaceChildren(h('p', {}, source.message || (source.status === 'disabled' ? 'Connect this source to see your activity.' : 'This source could not refresh.')),
+          ...(problems.length ? [h('ul', { class: 'source-problems' }, problems.map(problem => h('li', {}, h('strong', {}, problem.path), h('div', {}, problem.message))))] : []),
+          h('button', { type: 'button', class: 'text-button', onclick: () => source.status === 'disabled' ? connections.open() : void loadData({ refresh: true }) }, source.status === 'disabled' ? 'Open connections' : 'Try again'),
+          ...(problems.length ? [h('button', { type: 'button', class: 'text-button', onclick: () => connections.open() }, 'Edit connections')] : []));
+      }
       ctx.taskStorage = data.storage?.persistent === false ? 'This tab only' : browserDemo ? 'Saved in this browser' : 'Saved locally';
       try { state.mods.get(widget.id)?.update(data, ctx); }
       catch { ctx.notice.hidden = false; ctx.el.hidden = true; ctx.notice.replaceChildren(h('p', {}, 'This panel could not load.'), h('button', { class: 'text-button', type: 'button', onclick: () => void loadData() }, 'Reload panel')); }
@@ -90,7 +96,7 @@ export function startApp({ api, connectSession, createConnections, recordMicroph
     const button = document.getElementById('refresh'); button.disabled = true; button.textContent = 'Refreshing…';
     try {
       const data = await api(refresh ? '/api/refresh' : '/api/all', { method: refresh ? 'POST' : 'GET', ...(refresh ? { body: {} } : {}), signal: state.controller.signal });
-      if (own === state.request) renderDashboard(data);
+      if (own === state.request) { renderDashboard(data); return data; }
     } catch (error) { if (own === state.request && error.name !== 'AbortError') showError(`${error.message}${state.data ? ' The previous view is still shown.' : ''}`); }
     finally { if (own === state.request) { button.disabled = false; button.textContent = 'Refresh'; state.loading = false; } }
   }
@@ -106,7 +112,7 @@ export function startApp({ api, connectSession, createConnections, recordMicroph
     try { state.welcomeDismissed = localStorage.getItem(welcomeKey) === '1'; } catch {}
     buildPanels(); startClock(); initTheme(document.getElementById('theme-toggle'));
     const booted = boot();
-    connections = createConnections({ getConfig: () => state.config, onSaved: async () => { await loadConfig(); await loadData({ refresh: true }); assistant?.sync(); } });
+    connections = createConnections({ getConfig: () => state.config, onSaved: async () => { await loadConfig(); const data = await loadData({ refresh: true }); assistant?.sync(); return data; } });
     assistant = initAssistant({ api, recordMicrophone, browserDemo, getConfig: () => state.config, getCapabilities: () => state.capabilities, onRefresh: () => loadData(), openConnections: () => connections.open() });
     for (const id of ['connections-open', 'welcome-connect', 'workspace-mode']) document.getElementById(id).addEventListener('click', () => connections.open());
     document.getElementById('assistant-open').addEventListener('click', () => assistant.open());
