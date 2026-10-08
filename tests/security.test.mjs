@@ -5,7 +5,7 @@ import http from 'node:http';
 import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -76,7 +76,7 @@ syncBuiltinESMExports();
     ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
     ...(process.env.TEMP ? { TEMP: temporary, TMP: temporary } : {}),
   };
-  child = spawn(process.execPath, ['--import', guard, 'server.mjs'], { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  child = spawn(process.execPath, ['--import', pathToFileURL(guard).href, 'server.mjs'], { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
   await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error(`Server did not start with clean HOME. ${output}`)), 12_000);
     const fail = error => { clearTimeout(timeout); reject(error); };
