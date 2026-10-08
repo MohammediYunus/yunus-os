@@ -37,6 +37,19 @@ Use the Yunus OS folder you just cloned to try a real project. This walkthrough 
 3. Open **Assistant**, select **Give me a workspace summary**, then click **Send** to get a summary of your connected workspace.
 4. Type **Add a task: review the release checklist** and click **Send**. Click **Approve: Add task: review the release checklist**, then **Close** to see the saved task in **Local tasks**.
 
+## Updating
+
+For a Git checkout, stop the running server with Ctrl+C, then run:
+
+```sh
+git pull --ff-only
+npm start
+```
+
+If you downloaded a source archive, extract the new version into a separate folder and start it there. By default, settings and tasks stay in **~/.config/yunus-os**. If you use **YOS_CONFIG_DIR**, keep the existing profile directory and use its absolute path when starting from another folder. A relative path such as **./profile** points somewhere different after you change folders. Keep your **YOS_PORT** value when restarting too.
+
+For the optional macOS wrapper, quit **Yunus OS Community** and stop any separate Yunus OS server on its port. Move the previous **dist/Yunus OS Community.app** aside, then run **bash scripts/build-macos.sh** again. The wrapper can reuse a running community server, so quitting only the window does not update a server you started separately.
+
 ## Make it yours
 
 Open **Connections** in the dashboard to configure your display name and choose **My workspace** for live data. Connect only the sources you want:
