@@ -6,8 +6,8 @@ import path from 'node:path';
 import { createAssistant, findExecutable, runTextProcess } from '../lib/assistant.mjs';
 import { voiceCapabilities } from '../lib/voice.mjs';
 
-async function withPath(fn) {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'yos tools '));
+async function withPath(fn, base = os.tmpdir()) {
+  const root = await mkdtemp(path.join(base, 'yos tools '));
   const previous = process.env.PATH;
   process.env.PATH = root;
   try { await fn(root); }
@@ -34,8 +34,9 @@ test('relative PATH entries resolve to absolute executable paths', async () => {
     const executable = path.join(root, filename);
     await writeFile(executable, 'fixture', { mode: 0o755 });
     process.env.PATH = path.relative(process.cwd(), root);
+    assert.equal(path.isAbsolute(process.env.PATH), false);
     assert.equal(await findExecutable(filename), executable);
-  });
+  }, process.cwd());
 });
 
 test('POSIX discovery preserves exact names and requires executable permission', { skip: process.platform === 'win32' }, async () => {
@@ -78,9 +79,10 @@ test('Windows discovery supports explicit native suffixes and both relative path
     await writeFile(executable, 'native file fixture');
     assert.equal(await findExecutable(executable), executable);
     const relative = path.relative(process.cwd(), executable);
+    assert.equal(path.isAbsolute(relative), false);
     assert.equal(await findExecutable(relative), executable);
     assert.equal(await findExecutable(relative.replaceAll('\\', '/')), executable);
-  });
+  }, process.cwd());
 });
 
 test('Windows discovery preserves PATH directory precedence and accepts native COM files', { skip: process.platform !== 'win32' }, async () => {
