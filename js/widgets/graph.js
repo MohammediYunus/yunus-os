@@ -298,36 +298,40 @@ function resetView() {
   clearHover();
 }
 
-function showFocusPanel(node) {
+function showFocusPanel(node, { focusResult = false } = {}) {
   const { statsBlock, focusBlock } = S.els;
+  const hadFocus = focusBlock.contains(document.activeElement);
   if (!node) {
     focusBlock.style.display = 'none';
     statsBlock.style.display = '';
+    if (hadFocus) S.els.explore.focus();
     return;
   }
   const neigh = [...(S.neighbors.get(node.id) || [])]
     .map((id) => S.byId.get(id)).filter(Boolean)
     .sort((a, b) => (b.degree || 0) - (a.degree || 0)).slice(0, 5);
   const nLinks = (S.neighbors.get(node.id) || new Set()).size;
+  const heading = h('div', { class: 'gx-focus-name', role: 'heading', 'aria-level': '3', tabindex: '-1' }, node.label);
   focusBlock.replaceChildren(
-    h('div', { class: 'gx-focus-name' }, node.label),
+    heading,
     h('div', { class: 'gx-focus-meta' },
       `${nLinks} ${nLinks === 1 ? 'link' : 'links'} shown · deg ${node.degree ?? '—'}`),
     h('div', { class: 'gx-focus-rel' }, 'related'),
     ...neigh.map((nb) => h('button', {
       class: 'gx-focus-nb',
       title: nb.label,
-      onclick: (e) => { e.stopPropagation(); pin(nb.id); },
+      onclick: (e) => { e.stopPropagation(); pin(nb.id, { focusResult: true }); },
     }, nb.label.length > 30 ? nb.label.slice(0, 29) + '…' : nb.label)),
   );
   focusBlock.style.display = '';
   statsBlock.style.display = 'none';
+  if (focusResult || hadFocus) heading.focus();
 }
 
-function pin(id) {
+function pin(id, options) {
   S.pinnedId = id;
   S.els.wrap?.classList.toggle('gx-pinned', !!id);
-  showFocusPanel(id ? S.byId.get(id) : null);
+  showFocusPanel(id ? S.byId.get(id) : null, options);
 }
 
 /* ---------- events ---------- */
@@ -459,13 +463,14 @@ export default {
     S.els.empty = h('p', { class: 'gx-empty', hidden: true }, 'No supported source files found. Connect a repository folder to build your graph.');
     wrap.append(S.els.empty, S.canvas, S.els.tip, S.els.hud, S.els.hero, S.els.statsBlock, S.els.focusBlock);
     let exploreIndex = 0;
+    S.els.explore = h('button', { class: 'graph-reset', type: 'button', onclick: () => {
+      const hubs = [...S.nodes].sort((a, b) => b.degree - a.degree);
+      if (hubs.length) pin(hubs[exploreIndex++ % hubs.length].id, { focusResult: true });
+    } }, 'Explore a node');
     el.append(wrap,
       h('div', { class: 'graph-help' },
         h('span', {}, 'Drag to pan · right-drag to rotate · scroll to zoom'),
-        h('button', { class: 'graph-reset', type: 'button', onclick: () => {
-          const hubs = [...S.nodes].sort((a, b) => b.degree - a.degree);
-          if (hubs.length) pin(hubs[exploreIndex++ % hubs.length].id);
-        } }, 'Explore a node'),
+        S.els.explore,
         h('button', { class: 'graph-reset', type: 'button', onclick: () => { resetView(); pin(null); } }, 'Reset view')));
 
     derivePalette();
