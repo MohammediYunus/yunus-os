@@ -13,6 +13,7 @@
 .task-row.done .task-copy > span { color:var(--dim); text-decoration:line-through; }
 .task-remove { background:none; border:0; color:var(--dim); font:10px var(--font-mono); padding:3px 0 3px 4px; cursor:pointer; }
 .task-remove:hover { color:var(--crit); }
+.task-remove[aria-disabled="true"], .task-form button[aria-disabled="true"] { opacity:.5; cursor:not-allowed; }
 .task-form { display:flex; gap:8px; }
 .task-form input { min-width:0; flex:1; }
 .task-form .secondary-button { padding:7px 10px; }
