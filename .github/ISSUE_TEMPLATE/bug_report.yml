@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a reproducible problem using synthetic or redacted data.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use SECURITY.md for vulnerabilities. Do not include tokens, private source code, account exports or screenshots of connected private data.
+  - type: input
+    id: version
+    attributes:
+      label: Yunus OS version or commit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system, browser and Node.js version
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Workspace mode
+      options:
+        - Demo
+        - Live
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Use an example repository or temporary directory when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted logs or screenshots
+      description: Check this material for credentials and personal information before sharing it.

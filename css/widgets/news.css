@@ -1,0 +1,121 @@
+/* YUNUS OS — AI Intel widget (news feed). Scoped to .w-news; tokens from css/tokens.css. */
+
+.w-news { display: flex; flex-direction: column; min-width: 0; }
+
+/* ---------- filter chips ---------- */
+.w-news .news-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding-bottom: 10px; margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.w-news .news-chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.w-news .news-chip:hover { color: var(--fg); border-color: var(--line-strong); }
+.w-news .news-chip.active {
+  color: var(--orange);
+  border-color: var(--orange);
+  background: var(--orange-soft);
+}
+
+/* ---------- list rows ---------- */
+/* min-height ≈ 10 rows so a sparse filter never collapses the panel. */
+.w-news .news-list {
+  display: flex; flex-direction: column; min-width: 0;
+  flex: 1 1 auto;
+  min-height: 140px;
+}
+.w-news .lr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 6px; margin: 0 -6px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 3px;
+  min-width: 0;
+  flex: 0 0 auto;
+  transition: background 0.12s ease;
+}
+.w-news .lr:hover {
+  background: var(--panel-raise);
+  box-shadow: inset 2px 0 0 var(--orange);
+}
+.w-news .news-list > .lr:last-child { border-bottom: 0; }
+.w-news .lr-left {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1 1 auto; min-width: 0;
+}
+.w-news .lr-right {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: baseline; gap: 8px;
+  font-size: var(--fs-small); color: var(--dim); text-align: right;
+}
+.w-news .m-pts { color: var(--fg); }
+.w-news .m-cmt { color: var(--dim); }
+.w-news .m-time { color: var(--faint); }
+
+/* ---------- source tag chip ----------
+   One neutral style for ALL sources (color = semantics/identity only; the
+   active filter chip above is the single colored element in this panel).
+   Fixed min-width keeps the title column left-aligned. */
+.w-news .src {
+  flex: 0 0 auto;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  line-height: 1.5;
+  padding: 1px 5px; border-radius: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  min-width: 70px; text-align: center;
+}
+
+/* ---------- title (1-line clamp, full text in title attr) ---------- */
+.w-news .news-title {
+  flex: 0 1 auto; min-width: 0;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: var(--fs-small);
+  color: var(--fg);
+}
+
+/* dotted leader bridging the title→meta gap on wide viewports (~15% fg) */
+.w-news .news-lead {
+  flex: 1 1 18px; min-width: 18px; height: 0;
+  border-bottom: 1px dotted var(--fg);
+  opacity: 0.15;
+  transform: translateY(3px);
+}
+
+/* ---------- always-present footer line (panel keeps its mass) ---------- */
+.w-news .news-foot {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 8px 0 2px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--ls-micro);
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* center the empty-state inside the reserved min-height */
+.w-news .empty-state { margin: auto; }
+
+/* ---------- enter stagger ---------- */
+@keyframes news-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.w-news .lr.enter { animation: news-enter 0.32s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .w-news .lr.enter { animation: none; }
+}

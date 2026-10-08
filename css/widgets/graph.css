@@ -1,0 +1,138 @@
+/* YUNUS OS — widget 03: THE GRAPH. 3D globe canvas + DOM overlays. */
+
+/* the widget root is the panel body itself — full bleed */
+.panel-body.w-graph { padding: 0; }
+
+.w-graph .gx-wrap {
+  position: relative;
+  height: 430px;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+@media (max-width: 760px) {
+  .w-graph .gx-wrap { height: 340px; }
+}
+
+.w-graph .gx-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+/* ---------- tooltip ---------- */
+.w-graph .gx-tip {
+  position: absolute; z-index: 3;
+  max-width: 200px;
+  pointer-events: none;
+  background: var(--panel-raise);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+.w-graph .gx-tip-name {
+  font-size: var(--fs-small);
+  color: var(--fg);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.w-graph .gx-tip-meta {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--dim); margin-top: 2px;
+}
+
+/* ---------- zoom HUD (top-right, only after user zoom) ---------- */
+.w-graph .gx-hud {
+  position: absolute; z-index: 2;
+  top: 10px; right: 12px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--dim);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 8px;
+}
+.w-graph .gx-hud .num { color: var(--fg); }
+.w-graph .gx-hud-hint { color: var(--faint); }
+
+/* ---------- hero overlay (bottom-left) ---------- */
+.w-graph .gx-hero {
+  position: absolute; z-index: 2;
+  left: 16px; bottom: 12px;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+/* deep zoom = exploring — overlays step aside */
+.w-graph .gx-zoomed .gx-hero,
+.w-graph .gx-zoomed .gx-stats { opacity: 0.12; }
+.w-graph .gx-hero-num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-hero);
+  line-height: 0.95;
+  color: var(--orange);
+  text-shadow: var(--glow-orange);
+  letter-spacing: 0.01em;
+}
+.w-graph .gx-hero-label {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--ls-micro); text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 6px;
+}
+
+/* ---------- stats block (bottom-right, default) ---------- */
+.w-graph .gx-stats {
+  position: absolute; z-index: 2;
+  right: 16px; bottom: 14px;
+  text-align: right;
+  pointer-events: none;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--dim);
+  display: flex; flex-direction: column; gap: 3px;
+  transition: opacity 0.35s ease;
+}
+.w-graph .gx-stats b { color: var(--fg); font-weight: 500; }
+
+/* ---------- focus block (bottom-right while a node is pinned) ---------- */
+.w-graph .gx-focus {
+  position: absolute; z-index: 2;
+  right: 12px; bottom: 12px;
+  width: 220px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 10px 12px;
+}
+.w-graph .gx-focus-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-small); font-weight: 700;
+  color: var(--orange);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.w-graph .gx-focus-meta {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--dim); margin: 3px 0 8px;
+}
+.w-graph .gx-focus-rel {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--ls-micro); text-transform: uppercase;
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+  padding-top: 7px; margin-bottom: 4px;
+}
+.w-graph .gx-focus-nb {
+  display: block; width: 100%;
+  text-align: left;
+  font-family: var(--font-mono); font-size: var(--fs-small);
+  color: var(--fg);
+  background: none; border: none;
+  padding: 2px 0; cursor: pointer;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.w-graph .gx-focus-nb:hover { color: var(--orange); }

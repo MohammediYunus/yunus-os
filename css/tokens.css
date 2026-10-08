@@ -1,0 +1,151 @@
+/* YUNUS OS — design tokens (canonical; see docs/DESIGN.md)
+   Dark = default (:root). Light theme ("blueprint on paper") applies via
+   :root[data-theme="light"] (explicit) or the OS preference in auto mode
+   (no data-theme attr). js/lib/theme.js manages the attribute. */
+:root {
+  color-scheme: dark;
+
+  /* surfaces */
+  --bg: #060605;
+  --bg-raise: #0a0a08;
+  --panel: #0d0d0b;
+  --panel-raise: #12120f;
+  --line: #1e1e1a;
+  --line-strong: #2c2c25;
+
+  /* identity + status */
+  --orange: #e8520a;
+  --orange-soft: rgba(232, 82, 10, 0.14);
+  --ok: #3dff7c;
+  --ok-soft: rgba(61, 255, 124, 0.12);
+  --warn: #ffb020;
+  --warn-soft: rgba(255, 176, 32, 0.12);
+  --crit: #ff4545;
+  --crit-soft: rgba(255, 69, 69, 0.12);
+  --info: #56c8ff;
+  --info-soft: rgba(86, 200, 255, 0.12);
+
+  /* text */
+  --fg: #e9e7df;
+  --dim: #8a887e;
+  --faint: #55534b;
+
+  /* type */
+  --font-display: 'Space Mono', 'SF Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  --fs-micro: 10px;
+  --fs-small: 11.5px;
+  --fs-body: 13px;
+  --fs-title: 12px;
+  --fs-hero: 64px;
+  --ls-micro: 0.16em;
+
+  /* rhythm */
+  --gap: 14px;
+  --pad: 14px;
+  --radius: 4px;
+
+  /* glow — accents only, keep subtle */
+  --glow-orange: 0 0 14px rgba(232, 82, 10, 0.45);
+  --glow-orange-dim: 0 0 6px rgba(232, 82, 10, 0.35);
+  --glow-ok: 0 0 10px rgba(61, 255, 124, 0.35);
+  --glow-warn: 0 0 8px rgba(255, 176, 32, 0.3);
+  --glow-crit: 0 0 10px rgba(255, 69, 69, 0.35);
+
+  /* chrome — body dot grid, sparse crosses, scanlines, vignette, boot overlay */
+  --grid-dot: rgba(233, 231, 223, 0.045);
+  --grid-cross: rgba(233, 231, 223, 0.02);
+  --scanline: rgba(0, 0, 0, 0.09);
+  --vignette: rgba(0, 0, 0, 0.5);
+  --boot-bg: var(--bg);
+}
+
+/* ---------- LIGHT — "blueprint on paper" (explicit pick) ---------- */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg: #f4f2ec;
+  --bg-raise: #efece1;
+  --panel: #fbfaf6;
+  --panel-raise: #f1eee3;
+  --line: #ddd8cc;
+  --line-strong: #c8c2b2;
+
+  /* identity + status (same orange, darker semantics for contrast) */
+  --orange: #e8520a;
+  --orange-soft: rgba(232, 82, 10, 0.1);
+  --ok: #0d9448;
+  --ok-soft: rgba(13, 148, 72, 0.1);
+  --warn: #b8770a;
+  --warn-soft: rgba(184, 119, 10, 0.12);
+  --crit: #d42f2f;
+  --crit-soft: rgba(212, 47, 47, 0.1);
+  --info: #0f7fc4;
+  --info-soft: rgba(15, 127, 196, 0.1);
+
+  /* text */
+  --fg: #1c1b17;
+  --dim: #6b675c;
+  --faint: #a09a8c;
+
+  /* glows near-disabled on paper */
+  --glow-orange: 0 0 10px rgba(232, 82, 10, 0.1);
+  --glow-orange-dim: 0 0 5px rgba(232, 82, 10, 0.08);
+  --glow-ok: 0 0 8px rgba(13, 148, 72, 0.08);
+  --glow-warn: 0 0 6px rgba(184, 119, 10, 0.08);
+  --glow-crit: 0 0 8px rgba(212, 47, 47, 0.08);
+
+  /* chrome — dot grid dark-on-paper ~5%; scanlines/vignette basically invisible */
+  --grid-dot: rgba(28, 27, 23, 0.05);
+  --grid-cross: rgba(28, 27, 23, 0.03);
+  --scanline: rgba(28, 27, 23, 0.015);
+  --vignette: rgba(28, 27, 23, 0.05);
+  --boot-bg: var(--bg);
+}
+
+/* ---------- LIGHT — auto mode follows the OS preference ---------- */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+
+    /* surfaces */
+    --bg: #f4f2ec;
+    --bg-raise: #efece1;
+    --panel: #fbfaf6;
+    --panel-raise: #f1eee3;
+    --line: #ddd8cc;
+    --line-strong: #c8c2b2;
+
+    /* identity + status (same orange, darker semantics for contrast) */
+    --orange: #e8520a;
+    --orange-soft: rgba(232, 82, 10, 0.1);
+    --ok: #0d9448;
+    --ok-soft: rgba(13, 148, 72, 0.1);
+    --warn: #b8770a;
+    --warn-soft: rgba(184, 119, 10, 0.12);
+    --crit: #d42f2f;
+    --crit-soft: rgba(212, 47, 47, 0.1);
+    --info: #0f7fc4;
+    --info-soft: rgba(15, 127, 196, 0.1);
+
+    /* text */
+    --fg: #1c1b17;
+    --dim: #6b675c;
+    --faint: #a09a8c;
+
+    /* glows near-disabled on paper */
+    --glow-orange: 0 0 10px rgba(232, 82, 10, 0.1);
+    --glow-orange-dim: 0 0 5px rgba(232, 82, 10, 0.08);
+    --glow-ok: 0 0 8px rgba(13, 148, 72, 0.08);
+    --glow-warn: 0 0 6px rgba(184, 119, 10, 0.08);
+    --glow-crit: 0 0 8px rgba(212, 47, 47, 0.08);
+
+    /* chrome — dot grid dark-on-paper ~5%; scanlines/vignette basically invisible */
+    --grid-dot: rgba(28, 27, 23, 0.05);
+    --grid-cross: rgba(28, 27, 23, 0.03);
+    --scanline: rgba(28, 27, 23, 0.015);
+    --vignette: rgba(28, 27, 23, 0.05);
+    --boot-bg: var(--bg);
+  }
+}

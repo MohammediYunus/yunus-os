@@ -1,0 +1,227 @@
+/* YUNUS OS — widget 07: REPO HYGIENE (full-width bottom strip)
+   Anatomy: fit-to-width card row (whole cards only + "+N MORE" chip; JS ResizeObserver
+   decides how many fit) + toggleable overflow row below + fixed suggestions column right. */
+
+.w-hygiene {
+  display: flex;
+  gap: var(--gap);
+  align-items: stretch;
+  min-width: 0;
+}
+
+/* ---------- card area: primary row + hidden overflow row ---------- */
+.hy-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hy-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden; /* belt-and-braces: JS only places whole cards here */
+}
+.hy-row > .empty-state { flex: 1 1 auto; }
+
+/* second row: revealed by the +N chip, wraps so every hidden card shows whole */
+.hy-row-more { display: none; }
+.hy-main.is-open .hy-row-more {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* ---------- repo card ---------- */
+.hy-card {
+  flex: 0 0 auto;
+  width: 236px;
+  min-height: 106px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--bg-raise);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.hy-card.is-warn { border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
+.hy-card.is-crit { border-color: color-mix(in srgb, var(--crit) 50%, transparent); }
+
+/* hover: orange left tick + border brighten, same register as other widget rows */
+.hy-card:hover {
+  background: var(--panel-raise);
+  border-color: var(--line-strong);
+  box-shadow: inset 2px 0 0 var(--orange);
+}
+.hy-card.is-warn:hover { border-color: color-mix(in srgb, var(--warn) 58%, transparent); }
+.hy-card.is-crit:hover { border-color: color-mix(in srgb, var(--crit) 66%, transparent); }
+
+.hy-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-title);
+  letter-spacing: 0.04em;
+}
+.hy-name-txt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* branch is an identifier — keep microlabel size/tracking but not uppercase */
+.hy-branch {
+  text-transform: none;
+  letter-spacing: 0.05em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hy-stats {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-size: var(--fs-small);
+  color: var(--dim);
+  white-space: nowrap;
+}
+.hy-stats .warn { color: var(--warn); }
+.hy-sep { color: var(--faint); }
+.hy-clean { color: var(--faint); }
+
+.hy-flags { display: flex; gap: 6px; flex-wrap: wrap; }
+.hy-flag {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+.hy-flag.info {
+  color: var(--info);
+  border-color: color-mix(in srgb, var(--info) 30%, transparent);
+}
+
+/* last commit pinned to card bottom so rows align across cards */
+.hy-last {
+  margin-top: auto;
+  padding-top: 4px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: var(--fs-small);
+}
+.hy-age { color: var(--faint); flex: 0 0 auto; }
+.hy-msg {
+  color: var(--dim);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- "+N MORE" chip-card ---------- */
+.hy-more {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 118px;
+  min-height: 106px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: 10px;
+  margin: 0;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease;
+}
+.hy-more:hover {
+  color: var(--fg);
+  border-color: var(--faint);
+  background: var(--panel-raise);
+  box-shadow: inset 2px 0 0 var(--orange);
+}
+.hy-more:focus-visible {
+  outline: 1px solid var(--orange);
+  outline-offset: 2px;
+}
+.hy-main.is-open .hy-more {
+  border-style: solid;
+  border-color: var(--line-strong);
+  background: var(--panel-raise);
+}
+.hy-more-n {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.1;
+  color: var(--dim);
+}
+.hy-more:hover .hy-more-n,
+.hy-main.is-open .hy-more-n { color: var(--fg); }
+.hy-more-verb { color: inherit; }
+.hy-more-dirty {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+/* ---------- suggestions column (fixed width; cards never run under it) ---------- */
+.hy-suggest {
+  flex: 0 0 300px;
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding-left: var(--gap);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hy-sug-head { padding-top: 2px; }
+.hy-sug-list { display: flex; flex-direction: column; gap: 7px; }
+.hy-sug {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: var(--fs-small);
+  color: var(--dim);
+  line-height: 1.4;
+  min-width: 0;
+}
+.hy-sug .dot { margin-top: 5px; }
+.hy-sug-txt { min-width: 0; }
+.hy-sug-empty { color: var(--faint); font-size: var(--fs-small); letter-spacing: 0.06em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hy-card,
+  .hy-more { transition: none; }
+}
+
+/* narrow: suggestions drop below the rail */
+@media (max-width: 900px) {
+  .w-hygiene { flex-direction: column; }
+  .hy-suggest {
+    flex: 1 1 auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 10px 0 0;
+  }
+}

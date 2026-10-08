@@ -1,0 +1,100 @@
+/* YUNUS OS — GitHub Ops widget (panel 06). Tokens only; see css/tokens.css. */
+
+.w-github { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+/* ---------- sections ---------- */
+.w-github .gh-sec { min-width: 0; }
+.w-github .gh-sec + .gh-sec { border-top: 1px solid var(--line); padding-top: 10px; }
+
+.w-github .gh-sec-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 5px;
+}
+.w-github .gh-count {
+  margin-left: auto;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 6px;
+  line-height: 16px;
+}
+.w-github .gh-count.hot {
+  color: var(--orange);
+  border-color: var(--orange);
+  background: var(--orange-soft);
+  text-shadow: var(--glow-orange);
+}
+
+/* ---------- rows (listRow anatomy: .lr > .lr-left + .lr-right) ---------- */
+.w-github .gh-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 5px 6px;
+  margin: 0 -6px;
+  border-radius: 3px;
+  min-width: 0;
+}
+.w-github .gh-row .lr-left { flex: 1 1 auto; min-width: 0; }
+.w-github .gh-row .lr-right {
+  flex: 0 0 auto;
+  font-size: var(--fs-small);
+  color: var(--faint);
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+.w-github .gh-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.w-github .gh-line .dot { margin-right: 1px; }
+
+.w-github .gh-title {
+  flex: 1 1 auto; min-width: 0;
+  font-size: var(--fs-small);
+  color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* slim rows (recent runs): tight ticker — less vertical padding, workflow name wins the space */
+.w-github .gh-row.slim { padding-top: 2px; padding-bottom: 2px; }
+.w-github .gh-row.slim .gh-title { flex: 1 1 auto; }
+.w-github .gh-row.slim .gh-branch { flex: 0 1 auto; max-width: 30%; opacity: 0.65; }
+
+.w-github .gh-chip {
+  flex: 0 0 auto;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 0 5px;
+  line-height: 15px;
+  white-space: nowrap;
+}
+.w-github .gh-chip.ok { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+.w-github .gh-chip.crit { color: var(--crit); border-color: var(--crit); background: var(--crit-soft); }
+.w-github .gh-chip.faint { color: var(--faint); border-color: var(--line); }
+
+.w-github .gh-meta {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 2px;
+  min-width: 0;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+.w-github .gh-branch {
+  min-width: 0;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------- empty states: tighter than the shell default ---------- */
+.w-github .empty-state { padding: 10px 4px; }
+
+/* ---------- aux counts summary in panel head ---------- */
+.gh-aux { color: var(--dim); }
+.gh-aux.hot { color: var(--orange); text-shadow: var(--glow-orange); }
+.gh-aux-sep { color: var(--faint); }

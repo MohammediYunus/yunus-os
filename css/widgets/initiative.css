@@ -1,0 +1,189 @@
+/* YUNUS OS — widget: Active Initiative. Scoped under .w-initiative; tokens from css/tokens.css. */
+
+.w-initiative { min-width: 0; }
+.w-initiative.is-empty .ini-main { display: none; }
+.w-initiative:not(.is-empty) > .empty-state { display: none; }
+
+/* ---- panel-head aux: plan slug, single line, never wraps (37px head stays 37px) ---- */
+.ini-aux {
+  display: block;
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- name + branch ---- */
+.w-initiative .ini-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  color: var(--fg);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.w-initiative .ini-branchrow { margin-top: 7px; min-width: 0; }
+.w-initiative .ini-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg-raise);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
+.w-initiative .ini-branch-glyph { color: var(--orange); flex: 0 0 auto; }
+.w-initiative .ini-branch-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- progress: fraction + segmented bar ---- */
+.w-initiative .ini-progress { margin-top: 12px; }
+.w-initiative .ini-frac { display: flex; align-items: baseline; gap: 4px; }
+.w-initiative .ini-done {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--orange);
+  text-shadow: var(--glow-orange);
+}
+.w-initiative .ini-total {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--dim);
+}
+.w-initiative .ini-pct {
+  margin-left: auto;
+  font-size: var(--fs-small);
+  color: var(--dim);
+}
+.w-initiative .ini-bar {
+  display: flex;
+  gap: 2px;
+  height: 3px;
+  margin-top: 9px;
+}
+.w-initiative .ini-bar:empty { display: none; }
+.w-initiative .ini-bar i {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--line);
+  border-radius: 1px;
+}
+.w-initiative .ini-bar i.on {
+  background: var(--orange);
+  box-shadow: var(--glow-orange-dim);
+}
+
+/* ---- section labels ---- */
+.w-initiative .ini-sec {
+  margin: 13px 0 5px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+/* ---- checklist rows: ✓ done dim / ▸ open bright ---- */
+.w-initiative .ini-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 3px 8px;
+  margin: 0 -8px;
+  font-size: var(--fs-small);
+  min-width: 0;
+  border-radius: 2px;
+}
+.w-initiative .ini-mark { flex: 0 0 auto; width: 10px; text-align: center; }
+.w-initiative .ini-item.done { color: var(--dim); }
+.w-initiative .ini-item.done .ini-mark { color: var(--faint); }
+.w-initiative .ini-item.open { color: var(--fg); }
+.w-initiative .ini-item.open .ini-mark {
+  color: var(--orange);
+  text-shadow: var(--glow-orange);
+}
+.w-initiative .ini-text {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* ---- recent commits: sha chip + subject + relTime ---- */
+.w-initiative .ini-commit {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  margin: 0 -8px;
+  font-size: var(--fs-small);
+  min-width: 0;
+  border-radius: 2px;
+}
+.w-initiative .ini-sha {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg-raise);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.05em;
+  color: var(--dim);
+}
+.w-initiative .ini-msg {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg);
+}
+.w-initiative .ini-when {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  color: var(--faint);
+}
+
+/* ---- non-link row hover: subtle raise + orange left tick (rows carry no links) ---- */
+.w-initiative .ini-item,
+.w-initiative .ini-commit { position: relative; }
+.w-initiative .ini-item::before,
+.w-initiative .ini-commit::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 2px;
+  background: var(--orange);
+  opacity: 0;
+}
+.w-initiative .ini-item:hover,
+.w-initiative .ini-commit:hover { background: var(--panel-raise); }
+.w-initiative .ini-item:hover::before,
+.w-initiative .ini-commit:hover::before { opacity: 1; }
+
+.w-initiative .ini-none {
+  padding: 4px 0;
+  font-size: var(--fs-small);
+  color: var(--faint);
+}

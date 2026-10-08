@@ -1,0 +1,20 @@
+.tasks-hero { display:flex; align-items:center; gap:14px; }
+.tasks-count { color:var(--orange); font:700 54px/1.05 var(--font-display); }
+.tasks-hero > span { white-space:pre-line; font-size:11px; text-transform:uppercase; letter-spacing:.13em; color:var(--dim); }
+.tasks-summary { color:var(--dim); font-size:11px; padding:10px 0 16px; }
+.task-tabs { display:flex; border-bottom:1px solid var(--line); gap:20px; }
+.task-tab { font:inherit; padding:7px 0; color:var(--dim); border:0; border-bottom:1px solid transparent; background:none; cursor:pointer; }
+.task-tab.on { color:var(--fg); border-color:var(--orange); }
+.task-list { max-height:340px; overflow-y:auto; margin-bottom:15px; }
+.task-row { display:flex; align-items:flex-start; gap:10px; padding:13px 0; border-bottom:1px solid var(--line); }
+.task-row input { margin-top:3px; accent-color:var(--orange); width:15px; height:15px; flex-shrink:0; }
+.task-copy { display:flex; flex-direction:column; gap:4px; min-width:0; flex:1; font-size:12px; overflow-wrap:anywhere; }
+.task-copy small { color:var(--dim); font-size:10px; }
+.task-row.done .task-copy > span { color:var(--dim); text-decoration:line-through; }
+.task-remove { background:none; border:0; color:var(--dim); font:10px var(--font-mono); padding:3px 0 3px 4px; cursor:pointer; }
+.task-remove:hover { color:var(--crit); }
+.task-form { display:flex; gap:8px; }
+.task-form input { min-width:0; flex:1; }
+.task-form .secondary-button { padding:7px 10px; }
+.tasks-empty { padding:20px 0; color:var(--dim); font-size:12px; line-height:1.7; }
+.task-status { color:var(--crit); font-size:11px; margin-top:8px; }

@@ -1,0 +1,34 @@
+# User configuration, credentials and generated workspace state
+.env
+.env.*
+!.env.example
+config.json
+tasks.json
+data/
+runtime/
+profiles/
+*.log
+*.jsonl
+*.pem
+*.key
+*.p12
+
+# Local build, recordings and tools
+node_modules/
+coverage/
+dist/
+build/
+*.app/
+*.dmg
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.gguf
+*.bin
+
+# Operating-system/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
