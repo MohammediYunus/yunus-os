@@ -55,6 +55,12 @@ The default local assistant works with the workspace data already available to Y
 
 The Claude option requires **Claude Code 2.1.248 or newer**, installed and signed in separately. That minimum supports the restricted, text-only invocation used here. An older or missing executable produces a setup error; Yunus OS does not bypass its permissions or sign in for you. Ollama requires a running local Ollama server and an already-installed model name.
 
+Each provider keeps its own model choice. **Claude model (optional)** can stay blank to use Claude Code's default, or contain a Claude model name or alias. Switching providers preserves both choices without passing your Ollama model to Claude.
+
+When upgrading an older profile, a saved model is kept with the provider selected in that profile. If Claude was selected, the old model appears in **Claude model (optional)**; clear it and save to return to the default. Older profiles stored only one model value, so an earlier accidental carryover cannot be distinguished from an intentional Claude override. Profiles saved with Local selected retain that value for Ollama and leave Claude's choice blank.
+
+For hand-edited settings or API updates, **assistant.model** is the Ollama model and **assistant.claudeModel** is the Claude override. Legacy Claude profiles migrate when loaded; callers sending updates at runtime must use **assistant.claudeModel** to change Claude.
+
 Try **Add a task: review the release checklist** with the local assistant. It proposes the task first; the task is saved only after you click its approval button. Titles can be up to 240 characters. External model replies cannot create tasks or execute app-opening actions.
 
 Local Whisper needs an installed executable and a model file you supply. Downloading a model and installing optional tools are separate steps; Yunus OS does not silently download them. Microphone access is requested when you use recording. Browser and operating-system support varies.

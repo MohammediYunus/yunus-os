@@ -36,6 +36,7 @@ export function initConnections({ getConfig, onSaved }) {
   add(ollamaFields, 'Model', 'model', { placeholder: 'An installed model name', help: 'Install models yourself. Yunus OS does not download a model for you.' });
   const claudeFields = h('div');
   add(claudeFields, 'Claude executable', 'executable', { placeholder: 'claude', help: 'Executable name or absolute path. Uses your existing CLI setup when you send a message.' });
+  add(claudeFields, 'Claude model (optional)', 'claudeModel', { placeholder: 'Default', help: "Leave blank to use Claude Code’s default, or enter a Claude model name or alias. Saved separately from your Ollama model." });
   assistant.append(ollamaFields, claudeFields);
   const voice = h('fieldset', {}, h('legend', {}, 'Voice'));
   const voiceEnabled = h('input', { type: 'checkbox', id: 'voice-enabled' });
@@ -60,6 +61,7 @@ export function initConnections({ getConfig, onSaved }) {
     fields.githubUsername.value = config.github?.username || ''; fields.githubRepositories.value = (config.github?.repositories || []).join('\n'); fields.githubToken.value = ''; clearToken.checked = false;
     tokenStatus.textContent = config.github?.hasToken ? 'A GitHub token is saved.' : 'No GitHub token saved.';
     fields.provider.value = config.assistant?.provider || 'local'; fields.endpoint.value = config.assistant?.endpoint || 'http://127.0.0.1:11434'; fields.model.value = config.assistant?.model || ''; fields.executable.value = config.assistant?.executable || 'claude';
+    fields.claudeModel.value = config.assistant?.claudeModel || '';
     voiceEnabled.checked = !!config.voice?.enabled; fields.whisperExecutable.value = config.voice?.whisperExecutable || 'whisper-cli'; fields.whisperModelPath.value = config.voice?.whisperModelPath || '';
     capability.textContent = 'Connections stay local. Optional providers run only when you ask. Computer actions require a separate confirmation in Assistant.';
     status.textContent = ''; status.classList.remove('error'); providerChanged();
@@ -70,7 +72,7 @@ export function initConnections({ getConfig, onSaved }) {
     if (clearToken.checked) github.clearToken = true;
     else if (fields.githubToken.value.trim()) github.token = fields.githubToken.value.trim();
     try {
-      await api('/api/config', { method: 'POST', body: { displayName: fields.displayName.value.trim(), mode: fields.mode.value, timezone: fields.timezone.value.trim() || 'system', workspacePaths: lines(fields.workspacePaths.value), github, assistant: { provider: fields.provider.value, model: fields.model.value.trim(), endpoint: fields.endpoint.value.trim(), executable: fields.executable.value.trim() }, voice: { enabled: voiceEnabled.checked, whisperExecutable: fields.whisperExecutable.value.trim(), whisperModelPath: fields.whisperModelPath.value.trim() } } });
+      await api('/api/config', { method: 'POST', body: { displayName: fields.displayName.value.trim(), mode: fields.mode.value, timezone: fields.timezone.value.trim() || 'system', workspacePaths: lines(fields.workspacePaths.value), github, assistant: { provider: fields.provider.value, model: fields.model.value.trim(), claudeModel: fields.claudeModel.value.trim(), endpoint: fields.endpoint.value.trim(), executable: fields.executable.value.trim() }, voice: { enabled: voiceEnabled.checked, whisperExecutable: fields.whisperExecutable.value.trim(), whisperModelPath: fields.whisperModelPath.value.trim() } } });
       fields.githubToken.value = ''; clearToken.checked = false;
       await onSaved(); status.textContent = 'Connections saved. You can close this panel.';
       tokenStatus.textContent = getConfig().github?.hasToken ? 'A GitHub token is saved.' : 'No GitHub token saved.';
