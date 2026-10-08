@@ -53,6 +53,8 @@ Demo and live data are distinguished in the interface. A disabled or failing con
 
 The live graph shows selected files, folders and supported import relationships. It is an explorable project map, **not a complete semantic dependency analysis** for every language. A large graph in demo mode represents a fictional workspace.
 
+Multiline JS/TS imports and re-exports are included. When a relative .js, .mjs or .cjs path has no selected literal file, the map also looks for its TypeScript source counterpart. Literal files take precedence; the graph does not read tsconfig aliases or reproduce the compiler's full resolution rules.
+
 Git is required for Git repository information. GitHub configuration does not read your GitHub CLI login or switch any account. Optional providers require their own installed tools and configuration; they do not become available merely because the demo works.
 
 ## Assistant and voice
