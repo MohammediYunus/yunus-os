@@ -90,7 +90,7 @@ export async function createApp({ configDir, port = 0, fetchImpl = fetch } = {})
         if (!file) { send(404, { error: 'Not found' }); return; }
         send(200, await readFile(path.join(ROOT, file)), MIME[path.extname(file)]); return;
       }
-      if (!authorized(req)) { send(401, { error: 'Open Yunus OS locally to start a session' }); return; }
+      if (!authorized(req)) { send(401, { code: 'LOCAL_SESSION_EXPIRED', error: 'Open Yunus OS locally to start a session' }); return; }
       if (pathname === '/api/config' && req.method === 'GET') { send(200, { config: publicConfig(store.get()), capabilities: await capabilities() }); return; }
       if (pathname === '/api/config' && req.method === 'POST') {
         await store.save(await jsonBody(req)); assistant.cancel(); cancelVoice();

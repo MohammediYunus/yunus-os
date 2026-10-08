@@ -14,13 +14,25 @@ export async function connectSession() {
 }
 export async function api(path, { method = 'GET', body = method === 'DELETE' ? {} : undefined, signal, binary = false } = {}) {
   await connectSession();
-  const headers = { 'X-Yunus-Token': token };
-  if (body !== undefined) headers['Content-Type'] = binary ? 'audio/wav' : 'application/json';
-  const response = await fetch(path, { method, headers, signal, cache: 'no-store', credentials: 'same-origin', body: body === undefined ? undefined : binary ? body : JSON.stringify(body) });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const reason = typeof data.error === 'string' ? data.error : typeof data.message === 'string' ? data.message : `Request failed (${response.status}). Try again.`;
-    throw new Error(reason.slice(0, 300));
+  const payload = body === undefined ? undefined : binary ? body : JSON.stringify(body);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    signal?.throwIfAborted();
+    const requestToken = token, headers = { 'X-Yunus-Token': requestToken };
+    if (body !== undefined) headers['Content-Type'] = binary ? 'audio/wav' : 'application/json';
+    const response = await fetch(path, { method, headers, signal, cache: 'no-store', credentials: 'same-origin', body: payload });
+    const data = await response.json().catch(() => ({}));
+    if (attempt === 0 && response.status === 401 && data.code === 'LOCAL_SESSION_EXPIRED') {
+      signal?.throwIfAborted();
+      // This marker is returned before route handlers run, so a write was not applied.
+      // A delayed rejection must not discard a newer token obtained by another request.
+      if (token === requestToken) token = null;
+      await connectSession();
+      continue;
+    }
+    if (!response.ok) {
+      const reason = typeof data.error === 'string' ? data.error : typeof data.message === 'string' ? data.message : `Request failed (${response.status}). Try again.`;
+      throw new Error(reason.slice(0, 300));
+    }
+    return data;
   }
-  return data;
 }
