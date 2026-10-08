@@ -25,6 +25,6 @@ Keep changes focused. Include a regression test that fails before a behavior fix
 
 ## Submitting a pull request
 
-Describe what changes for a user, why it is needed, and how you verified it. Disclose material AI assistance and independently review generated code. Do not claim tests, security properties or platform support that you have not checked.
+Describe what changes for a user, why it is needed, and how you verified it. Review every change before submitting it. Do not claim tests, security properties or platform support that you have not checked.
 
 By contributing, you agree that your contribution can be distributed under the repository's MIT license. Keep existing third-party notices, including the font OFL files. Never include code or data you are not entitled to share.
