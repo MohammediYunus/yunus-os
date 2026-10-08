@@ -64,12 +64,14 @@ export function startApp({ api, connectSession, createConnections, recordMicroph
     for (const widget of WIDGETS) {
       const ctx = state.panels.get(widget.id), source = data.sources?.[widget.source || widget.id];
       const unavailable = source?.status === 'disabled' || source?.status === 'error';
-      const partialData = source?.status === 'error' && ((widget.id === 'hygiene' && data.repos?.repos?.length) || (widget.id === 'graph' && data.graph?.nodes?.length));
+      const staleGitHub = widget.id === 'github' && source?.status === 'error' && source.stale === true && !!data.github;
+      const partialData = staleGitHub || source?.status === 'error' && ((widget.id === 'hygiene' && data.repos?.repos?.length) || (widget.id === 'graph' && data.graph?.nodes?.length));
       ctx.notice.hidden = !unavailable; ctx.el.hidden = unavailable && !partialData;
-      ctx.notice.classList.toggle('error', source?.status === 'error');
+      ctx.notice.classList.toggle('error', source?.status === 'error' && !staleGitHub);
+      ctx.notice.classList.toggle('stale', staleGitHub);
       if (unavailable) {
         const problems = source.problems || [];
-        ctx.notice.replaceChildren(h('p', {}, source.message || (source.status === 'disabled' ? 'Connect this source to see your activity.' : 'This source could not refresh.')),
+        ctx.notice.replaceChildren(h('p', {}, staleGitHub ? `${source.message || 'GitHub could not refresh.'} Showing your last successful update.` : source.message || (source.status === 'disabled' ? 'Connect this source to see your activity.' : 'This source could not refresh.')),
           ...(problems.length ? [h('ul', { class: 'source-problems' }, problems.map(problem => h('li', {}, h('strong', {}, problem.path), h('div', {}, problem.message))))] : []),
           h('button', { type: 'button', class: 'text-button', onclick: () => source.status === 'disabled' ? connections.open() : void loadData({ refresh: true }) }, source.status === 'disabled' ? 'Open connections' : 'Try again'),
           ...(problems.length ? [h('button', { type: 'button', class: 'text-button', onclick: () => connections.open() }, 'Edit connections')] : []));
@@ -80,11 +82,12 @@ export function startApp({ api, connectSession, createConnections, recordMicroph
     }
     const githubStatus = data.sources?.github?.status, reposStatus = data.sources?.repos?.status;
     const githubReady = ['live', 'demo'].includes(githubStatus);
+    const githubStale = githubStatus === 'error' && data.sources.github.stale === true && !!data.github;
     const reposReady = ['live', 'demo'].includes(reposStatus);
     const failing = (data.github?.recentRuns || []).filter(run => run.conclusion === 'failure').length;
     const openTasks = (data.tasks?.items || []).filter(task => !task.done).length;
     const dirty = (data.repos?.repos || []).reduce((sum, repo) => sum + (Number(repo.dirtyFiles) || 0), 0);
-    const chips = [['ok', browserDemo ? 'Browser demo ready' : 'Local server up'], [githubReady ? (failing ? 'crit' : 'ok') : githubStatus === 'error' ? 'warn' : '', githubReady ? (failing ? `${failing} recent run${failing === 1 ? '' : 's'} failed` : 'Recent CI clear') : githubStatus === 'error' ? 'GitHub unavailable' : 'GitHub not connected'], [openTasks ? 'warn' : 'ok', `${openTasks} tasks open`], [reposReady ? (dirty ? 'warn' : 'ok') : reposStatus === 'error' ? 'warn' : '', reposReady ? `${dirty} dirty files` : reposStatus === 'error' ? 'Workspace unavailable' : 'No workspace folders']];
+    const chips = [['ok', browserDemo ? 'Browser demo ready' : 'Local server up'], [githubReady ? (failing ? 'crit' : 'ok') : githubStatus === 'error' ? 'warn' : '', githubReady ? (failing ? `${failing} recent run${failing === 1 ? '' : 's'} failed` : 'Recent CI clear') : githubStale ? 'GitHub update delayed' : githubStatus === 'error' ? 'GitHub unavailable' : 'GitHub not connected'], [openTasks ? 'warn' : 'ok', `${openTasks} tasks open`], [reposReady ? (dirty ? 'warn' : 'ok') : reposStatus === 'error' ? 'warn' : '', reposReady ? `${dirty} dirty files` : reposStatus === 'error' ? 'Workspace unavailable' : 'No workspace folders']];
     document.getElementById('system-chips').replaceChildren(...chips.map(([tone, text]) => h('span', { class: `chip ${tone}` }, h('span', { class: 'dot' }), text)));
     document.getElementById('footer').replaceChildren(h('span', {}, data.disclosure || (demo ? 'Demo sources · tasks are saved on this computer' : 'Your connected workspace · read-only sources')), h('span', { class: 'spacer' }), h('span', {}, `Updated ${new Date(data.fetchedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`));
     document.getElementById('load-error').hidden = true;
