@@ -12,7 +12,7 @@ export async function connectSession() {
   })().finally(() => { sessionPromise = null; });
   return sessionPromise;
 }
-export async function api(path, { method = 'GET', body = method === 'DELETE' ? {} : undefined, signal, binary = false } = {}) {
+export async function api(path, { method = 'GET', body = method === 'DELETE' ? {} : undefined, signal, binary = false, responseType = 'json' } = {}) {
   await connectSession();
   const payload = body === undefined ? undefined : binary ? body : JSON.stringify(body);
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -20,6 +20,7 @@ export async function api(path, { method = 'GET', body = method === 'DELETE' ? {
     const requestToken = token, headers = { 'X-Yunus-Token': requestToken };
     if (body !== undefined) headers['Content-Type'] = binary ? 'audio/wav' : 'application/json';
     const response = await fetch(path, { method, headers, signal, cache: 'no-store', credentials: 'same-origin', body: payload });
+    if (response.ok && responseType === 'blob') return response.blob();
     const data = await response.json().catch(() => ({}));
     if (attempt === 0 && response.status === 401 && data.code === 'LOCAL_SESSION_EXPIRED') {
       signal?.throwIfAborted();

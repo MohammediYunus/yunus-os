@@ -40,7 +40,17 @@ export function initConnections({ getConfig, onSaved }) {
   assistant.append(ollamaFields, claudeFields);
   const voice = h('fieldset', {}, h('legend', {}, 'Voice'));
   const voiceEnabled = h('input', { type: 'checkbox', id: 'voice-enabled' });
-  voice.append(h('label', { class: 'check-row', for: 'voice-enabled' }, voiceEnabled, 'Enable microphone controls and spoken replies'), h('p', { class: 'field-help' }, 'Optional. Microphone access is requested only when you press Record. Spoken replies use macOS speech in the native app, or an installed local browser voice.'));
+  voice.append(h('label', { class: 'check-row', for: 'voice-enabled' }, voiceEnabled, 'Enable microphone controls and spoken replies'), h('p', { class: 'field-help' }, 'Microphone access is requested only when you press Record. You can hear replies to typed requests without installing Whisper.'));
+  add(voice, 'Spoken replies', 'outputProvider', { options: [['system', 'System voice · local'], ['elevenlabs', 'ElevenLabs · uses your credits']] });
+  const speechNote = h('p', { class: 'field-help provider-note' }); voice.append(speechNote);
+  const elevenlabsFields = h('div');
+  add(elevenlabsFields, 'ElevenLabs API key', 'elevenlabsApiKey', { type: 'password', placeholder: 'Leave blank to keep existing key', help: 'Create a restricted text-to-speech key with a credit limit in ElevenLabs. Saved on this computer by the local server; never returned to this page.' });
+  add(elevenlabsFields, 'Voice ID', 'elevenlabsVoiceId', { placeholder: 'Copy a voice ID from ElevenLabs', help: 'Use a voice available to your ElevenLabs account.' });
+  add(elevenlabsFields, 'Speech model', 'elevenlabsModel', { placeholder: 'eleven_multilingual_v2', help: 'Defaults to eleven_multilingual_v2. You can enter another ElevenLabs text-to-speech model ID.' });
+  const speechKeyStatus = h('p', { class: 'field-help' });
+  const clearSpeechKey = h('input', { type: 'checkbox', name: 'clearElevenlabsApiKey', id: 'clear-speech-key' });
+  elevenlabsFields.append(speechKeyStatus, h('label', { class: 'check-row', for: 'clear-speech-key' }, clearSpeechKey, 'Remove saved ElevenLabs key'));
+  voice.append(elevenlabsFields, h('h3', {}, 'Microphone input'));
   add(voice, 'Whisper executable', 'whisperExecutable', { placeholder: 'whisper-cli' });
   add(voice, 'Whisper model file', 'whisperModelPath', { placeholder: '/path/to/ggml-model.bin', help: 'An existing local whisper.cpp model for transcription. No audio is sent to a cloud transcription service.' });
   const status = h('p', { class: 'form-status', role: 'status', 'aria-live': 'polite' });
@@ -55,6 +65,13 @@ export function initConnections({ getConfig, onSaved }) {
     providerNote.textContent = provider === 'local' ? 'Works immediately for workspace summaries and task commands. No language model or account required.' : provider === 'ollama' ? 'Sends your messages to your configured local Ollama server when requested.' : 'Sends your messages through your installed Claude CLI when requested. Your existing plan or API billing applies.';
   }
   fields.provider.addEventListener('change', providerChanged);
+  function speechChanged() {
+    const cloud = fields.outputProvider.value === 'elevenlabs';
+    elevenlabsFields.hidden = !cloud;
+    speechNote.textContent = !cloud ? 'Uses macOS speech in the native app, or an installed local browser voice.' : fields.mode.value !== 'live' ? 'ElevenLabs is paused in Demo workspace. Choose My workspace to use it. Saving settings does not generate audio.' : 'With voice enabled, assistant reply text is sent to ElevenLabs to generate speech using your credits. Saving settings does not generate audio. Stop ends local playback but cannot undo credits already used.';
+  }
+  fields.outputProvider.addEventListener('change', speechChanged);
+  fields.mode.addEventListener('change', speechChanged);
   const hydrate = () => {
     const config = getConfig();
     fields.displayName.value = config.displayName || 'My workspace'; fields.mode.value = config.mode || 'demo';
@@ -64,18 +81,24 @@ export function initConnections({ getConfig, onSaved }) {
     fields.provider.value = config.assistant?.provider || 'local'; fields.endpoint.value = config.assistant?.endpoint || 'http://127.0.0.1:11434'; fields.model.value = config.assistant?.model || ''; fields.executable.value = config.assistant?.executable || 'claude';
     fields.claudeModel.value = config.assistant?.claudeModel || '';
     voiceEnabled.checked = !!config.voice?.enabled; fields.whisperExecutable.value = config.voice?.whisperExecutable || 'whisper-cli'; fields.whisperModelPath.value = config.voice?.whisperModelPath || '';
-    capability.textContent = 'Connections stay local. Optional providers run only when you ask. Computer actions require a separate confirmation in Assistant.';
-    status.textContent = ''; status.classList.remove('error'); problems.replaceChildren(); problems.hidden = true; providerChanged();
+    fields.outputProvider.value = config.voice?.outputProvider || 'system'; fields.elevenlabsApiKey.value = ''; clearSpeechKey.checked = false;
+    fields.elevenlabsVoiceId.value = config.voice?.elevenlabsVoiceId || ''; fields.elevenlabsModel.value = config.voice?.elevenlabsModel || 'eleven_multilingual_v2';
+    speechKeyStatus.textContent = config.voice?.hasElevenlabsApiKey ? 'An ElevenLabs key is saved.' : 'No ElevenLabs key saved.';
+    capability.textContent = 'Settings are saved on this computer. Optional providers run on requested interactions. Computer actions require a separate confirmation in Assistant.';
+    status.textContent = ''; status.classList.remove('error'); problems.replaceChildren(); problems.hidden = true; providerChanged(); speechChanged();
   };
   form.addEventListener('submit', async event => {
     event.preventDefault(); save.disabled = true; status.classList.remove('error'); problems.replaceChildren(); problems.hidden = true; status.textContent = 'Saving and checking your workspace…';
     const github = { username: fields.githubUsername.value.trim(), repositories: lines(fields.githubRepositories.value) };
     if (clearToken.checked) github.clearToken = true;
     else if (fields.githubToken.value.trim()) github.token = fields.githubToken.value.trim();
+    const voice = { enabled: voiceEnabled.checked, whisperExecutable: fields.whisperExecutable.value.trim(), whisperModelPath: fields.whisperModelPath.value.trim(), outputProvider: fields.outputProvider.value, elevenlabsVoiceId: fields.elevenlabsVoiceId.value.trim(), elevenlabsModel: fields.elevenlabsModel.value.trim() || 'eleven_multilingual_v2' };
+    if (clearSpeechKey.checked) voice.clearElevenlabsApiKey = true;
+    else if (fields.elevenlabsApiKey.value.trim()) voice.elevenlabsApiKey = fields.elevenlabsApiKey.value.trim();
     let saved = false;
     try {
-      await api('/api/config', { method: 'POST', body: { displayName: fields.displayName.value.trim(), mode: fields.mode.value, timezone: fields.timezone.value.trim() || 'system', workspacePaths: lines(fields.workspacePaths.value), github, assistant: { provider: fields.provider.value, model: fields.model.value.trim(), claudeModel: fields.claudeModel.value.trim(), endpoint: fields.endpoint.value.trim(), executable: fields.executable.value.trim() }, voice: { enabled: voiceEnabled.checked, whisperExecutable: fields.whisperExecutable.value.trim(), whisperModelPath: fields.whisperModelPath.value.trim() } } });
-      saved = true; fields.githubToken.value = ''; clearToken.checked = false;
+      await api('/api/config', { method: 'POST', body: { displayName: fields.displayName.value.trim(), mode: fields.mode.value, timezone: fields.timezone.value.trim() || 'system', workspacePaths: lines(fields.workspacePaths.value), github, assistant: { provider: fields.provider.value, model: fields.model.value.trim(), claudeModel: fields.claudeModel.value.trim(), endpoint: fields.endpoint.value.trim(), executable: fields.executable.value.trim() }, voice } });
+      saved = true; fields.githubToken.value = ''; clearToken.checked = false; fields.elevenlabsApiKey.value = ''; clearSpeechKey.checked = false;
       const data = await onSaved();
       if (!data) throw new Error('Workspace refresh did not finish');
       const issues = data.sources?.repos?.problems || [];
@@ -87,8 +110,10 @@ export function initConnections({ getConfig, onSaved }) {
         problems.hidden = false;
       } else status.textContent = 'Connections saved. You can close this panel.';
       tokenStatus.textContent = getConfig().github?.hasToken ? 'A GitHub token is saved.' : 'No GitHub token saved.';
+      speechKeyStatus.textContent = getConfig().voice?.hasElevenlabsApiKey ? 'An ElevenLabs key is saved.' : 'No ElevenLabs key saved.';
     } catch (error) { status.textContent = saved ? 'Connections saved, but Yunus OS could not check your workspace. Use Save connections to try again.' : error.message; status.classList.add('error'); }
-    finally { fields.githubToken.value = ''; save.disabled = false; }
+    finally { fields.githubToken.value = ''; fields.elevenlabsApiKey.value = ''; save.disabled = false; }
   });
+  view.dialog.addEventListener('close', () => { fields.githubToken.value = ''; fields.elevenlabsApiKey.value = ''; });
   return { open() { hydrate(); view.open(); } };
 }
