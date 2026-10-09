@@ -132,7 +132,9 @@ export function createFixtures(now = new Date()) {
     graph: { fetchedAt: ago(4), nodes, links, stats: { nodes: nodes.length, links: links.length, communities: modules.length }, builtAtCommit: 'demo104' },
     news: { fetchedAt: ago(2), items: newsTopics.map(([source, title], index) => ({ source, tag: source.toUpperCase(), title: `Sample: ${title}`, publishedAt: ago(18 + index * 21), ...(source === 'hn' || source === 'reddit' ? { points: 48 + index * 13, comments: 6 + index * 3 } : {}) })) },
     tasks: { fetchedAt: ago(1), items: checklist.map(([title, done], index) => ({ id: `demo-task-${index}`, title, done, createdAt: ago(index * 35) })) },
-    github: { fetchedAt: ago(1), user: 'sample-user', counts: { reviewRequested: reviewRequested.length, myOpenPRs: myOpenPRs.length, openIssues: openIssues.length }, reviewRequested, myOpenPRs, openIssues, recentRuns },
+    github: { fetchedAt: ago(1), user: 'sample-user', counts: { reviewRequested: reviewRequested.length, myOpenPRs: myOpenPRs.length, openIssues: openIssues.length },
+      search: Object.fromEntries(Object.entries({ reviewRequested, myOpenPRs, openIssues }).map(([name, rows]) => [name, { totalCount: rows.length, incompleteResults: false }])),
+      reviewRequested, myOpenPRs, openIssues, recentRuns },
     repos: {
       fetchedAt: ago(1),
       repos: repoRows.map(([name, branch, dirtyFiles, untracked, deleted, ahead, behind, stashes, lastCommitAgeHours, worktree, message]) => ({ name, branch, dirtyFiles, untracked, deleted, staged: dirtyFiles ? Math.min(2, dirtyFiles) : 0, ahead, behind, stashes, lastCommitAgeHours, worktree, lastCommitMsg: `Sample: ${message}`, path: `/synthetic/workspaces/${name}` })),

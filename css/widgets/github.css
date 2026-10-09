@@ -3,6 +3,7 @@
 .w-github { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 
 .gh-freshness { color:var(--dim); font-size:var(--fs-micro); line-height:1.6; }
+.gh-search-note { color:var(--dim); font-size:var(--fs-micro); line-height:1.6; margin-bottom:5px; }
 
 /* ---------- sections ---------- */
 .w-github .gh-sec { min-width: 0; }

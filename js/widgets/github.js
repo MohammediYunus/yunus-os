@@ -1,5 +1,6 @@
 // YUNUS OS — GitHub Ops widget: review queue, my open PRs, recent workflow runs.
 import { h, relTime, statusDot, listRow, clamp } from '../lib/ui.js';
+import { githubSearchCount } from '../lib/local-commands.js';
 
 const CI_DOT = { passing: 'ok', failing: 'crit', pending: 'warn', none: '' };
 const RUN_DOT = { success: 'ok', failure: 'crit', cancelled: '' };
@@ -79,6 +80,12 @@ function fill(bodyEl, rows, emptyText) {
   else bodyEl.replaceChildren(h('div', { class: 'empty-state' }, emptyText));
 }
 
+function searchNotice(result, configured) {
+  if (!configured) return 'No GitHub username configured.';
+  if (result.total === null) return `Showing ${result.loaded} results. ${result.incomplete ? 'GitHub search incomplete; total unknown.' : 'Total unavailable.'}`;
+  return result.loaded < result.total ? `Showing ${result.loaded} of ${result.total}.` : '';
+}
+
 const els = {};
 
 export default {
@@ -93,14 +100,16 @@ export default {
     els.reviewBadge = review.badge;
     els.prsBadge = prs.badge;
     els.runsBadge = runs.badge;
+    els.reviewNotice = h('div', { class: 'gh-search-note', hidden: true });
+    els.prsNotice = h('div', { class: 'gh-search-note', hidden: true });
     els.reviewBody = h('div', { class: 'gh-sec-body' }, h('div', { class: 'empty-state' }, 'awaiting data'));
     els.prsBody = h('div', { class: 'gh-sec-body' }, h('div', { class: 'empty-state' }, 'awaiting data'));
     els.runsBody = h('div', { class: 'gh-sec-body' }, h('div', { class: 'empty-state' }, 'awaiting data'));
     el.append(
       h('div', { class: 'w-github' },
         els.freshness,
-        h('div', { class: 'gh-sec' }, review.head, els.reviewBody),
-        h('div', { class: 'gh-sec' }, prs.head, els.prsBody),
+        h('div', { class: 'gh-sec' }, review.head, els.reviewNotice, els.reviewBody),
+        h('div', { class: 'gh-sec' }, prs.head, els.prsNotice, els.prsBody),
         h('div', { class: 'gh-sec' }, runs.head, els.runsBody),
       ),
     );
@@ -125,6 +134,7 @@ export default {
       setBadge(els.reviewBadge, null);
       setBadge(els.prsBadge, null);
       setBadge(els.runsBadge, null);
+      els.reviewNotice.hidden = els.prsNotice.hidden = true;
       fill(els.reviewBody, null, 'no github data');
       fill(els.prsBody, null, 'no github data');
       fill(els.runsBody, null, 'no github data');
@@ -134,18 +144,20 @@ export default {
     const review = Array.isArray(gh.reviewRequested) ? gh.reviewRequested : [];
     const prs = Array.isArray(gh.myOpenPRs) ? gh.myOpenPRs : [];
     const runs = (Array.isArray(gh.recentRuns) ? gh.recentRuns : []).slice(0, 4);
-    const counts = gh.counts || {};
-    const nReview = counts.reviewRequested ?? review.length;
-    const nPrs = counts.myOpenPRs ?? prs.length;
-    const nIssues = counts.openIssues ?? (Array.isArray(gh.openIssues) ? gh.openIssues.length : 0);
+    const configured = gh.user !== '';
+    const reviewCount = githubSearchCount(gh, 'reviewRequested'), prCount = githubSearchCount(gh, 'myOpenPRs'), issueCount = githubSearchCount(gh, 'openIssues');
+    const nReview = configured ? reviewCount.total : null, nPrs = configured ? prCount.total : null, nIssues = configured ? issueCount.total : null;
+    for (const [element, count] of [[els.reviewNotice, reviewCount], [els.prsNotice, prCount]]) {
+      element.textContent = searchNotice(count, configured); element.hidden = !element.textContent;
+    }
 
     if (ctx?.aux) {
       ctx.aux.replaceChildren(
-        h('span', { class: `gh-aux num${nReview > 0 ? ' hot' : ''}` }, String(nReview)),
+        h('span', { class: `gh-aux num${nReview > 0 ? ' hot' : ''}`, title: `Reviews requested: ${nReview ?? 'total unknown'}` }, nReview == null ? '—' : String(nReview)),
         h('span', { class: 'gh-aux-sep' }, '·'),
-        h('span', { class: 'gh-aux num' }, String(nPrs)),
+        h('span', { class: 'gh-aux num', title: `Open pull requests: ${nPrs ?? 'total unknown'}` }, nPrs == null ? '—' : String(nPrs)),
         h('span', { class: 'gh-aux-sep' }, '·'),
-        h('span', { class: 'gh-aux num' }, String(nIssues)),
+        h('span', { class: 'gh-aux num', title: `Assigned issues: ${nIssues ?? 'total unknown'}` }, nIssues == null ? '—' : String(nIssues)),
       );
     }
 
@@ -153,8 +165,8 @@ export default {
     setBadge(els.prsBadge, nPrs);
     setBadge(els.runsBadge, runs.length);
 
-    fill(els.reviewBody, review.map(reviewRow), 'review queue clear');
-    fill(els.prsBody, prs.map(prRow), 'no open prs');
+    fill(els.reviewBody, review.map(reviewRow), nReview === 0 ? 'review queue clear' : 'no review results loaded');
+    fill(els.prsBody, prs.map(prRow), nPrs === 0 ? 'no open prs' : 'no pull request results loaded');
     fill(els.runsBody, runs.map(runRow), 'no recent runs');
   },
 };
