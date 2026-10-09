@@ -1,5 +1,18 @@
 // Pure workspace commands shared by the local app and browser demo.
 const short = (value, length = 180) => String(value ?? '').replace(/\s+/g, ' ').slice(0, length);
+// A loaded page is not a total, including legacy snapshots with numeric counts.
+export function githubSearchCount(github, name) {
+  const loaded = Array.isArray(github?.[name]) ? github[name].length : 0;
+  const search = github?.search?.[name];
+  const total = Number.isSafeInteger(search?.totalCount) && search.totalCount >= loaded && search.incompleteResults === false ? search.totalCount : null;
+  return { loaded, total, incomplete: search?.incompleteResults === true };
+}
+function searchSummary(github, name, singular, plural) {
+  const { loaded, total, incomplete } = githubSearchCount(github, name);
+  const count = total ?? loaded, label = count === 1 ? singular : plural;
+  return total === null ? `${loaded} ${label} loaded (total unknown${incomplete ? '; GitHub search incomplete' : ''})`
+    : `${total} ${label}${loaded < total ? ` (${loaded} loaded)` : ''}`;
+}
 export function workspaceSummary(dashboard = {}) {
   const tasks = (dashboard.tasks?.items || []).filter(item => !item.done);
   const repoSource = dashboard.sources?.repos || {};
@@ -12,11 +25,10 @@ export function workspaceSummary(dashboard = {}) {
   const githubUser = typeof dashboard.github?.user === 'string' ? dashboard.github.user.trim() : null;
   const hasGitHub = githubReady && Boolean(githubUser);
   const prs = hasGitHub ? dashboard.github.myOpenPRs : [];
-  const reviews = hasGitHub ? dashboard.github.reviewRequested : [];
   const prefix = dashboard.demo ? 'Demo workspace (fictional data).' : 'Your workspace.';
   const counts = [`${tasks.length} open task${tasks.length === 1 ? '' : 's'}`];
   if (hasRepos) counts.push(`${repos.length} ${repos.length === 1 ? 'repository' : 'repositories'}${partialRepos ? ' available (partial)' : ''}`);
-  if (hasGitHub) counts.push(`${prs.length} open pull request${prs.length === 1 ? '' : 's'}`, `${reviews.length} review${reviews.length === 1 ? '' : 's'} requested`);
+  if (hasGitHub) counts.push(searchSummary(dashboard.github, 'myOpenPRs', 'open pull request', 'open pull requests'), searchSummary(dashboard.github, 'reviewRequested', 'review requested', 'reviews requested'));
   const lines = [prefix, counts.join('; ') + '.'];
   for (const task of tasks.slice(0, 12)) lines.push(`Task: ${short(task.title)}`);
   for (const repo of repos.slice(0, 12)) lines.push(`Repository: ${short(repo.name, 70)}; branch ${short(repo.branch, 70)}; ${Number(repo.dirtyFiles) || 0} changed files.`);

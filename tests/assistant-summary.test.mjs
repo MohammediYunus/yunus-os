@@ -9,7 +9,7 @@ const emptyWorkspace = () => ({
   demo: false,
   tasks: { items: [] },
   repos: { repos: [] },
-  github: { user: 'fixture-user', myOpenPRs: [], reviewRequested: [] },
+  github: { user: 'fixture-user', myOpenPRs: [], reviewRequested: [], search: { myOpenPRs: { totalCount: 0, incompleteResults: false }, reviewRequested: { totalCount: 0, incompleteResults: false } } },
   sources: { repos: { status: 'live' }, github: { status: 'live' } },
 });
 const repo = { name: 'orbit', branch: 'main', dirtyFiles: 3, path: '/fixture/private-path' };
@@ -121,6 +121,7 @@ test('successful data retains counts and readable task and repository details', 
   dashboard.repos.repos = [repo];
   dashboard.github.myOpenPRs = [{ title: 'Fix keyboard focus', ci: 'passing' }];
   dashboard.github.reviewRequested = [{}];
+  dashboard.github.search.myOpenPRs.totalCount = dashboard.github.search.reviewRequested.totalCount = 1;
   const text = await summaries(dashboard);
   assert.match(text, /1 repository;/);
   assert.match(text, /1 open pull request/);
